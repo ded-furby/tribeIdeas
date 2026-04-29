@@ -42,16 +42,20 @@ const contexts: Context[] = [
 const sampleIdea =
   "A one-click idea validator that simulates how founders, builders, and investors react before you post. It combines audience simulation with TRIBE-derived brain response references so you can see which phrase creates clarity, confusion, or trust.";
 
-function verdictIcon(verdict: string) {
-  if (verdict === "Validated") return CheckCircle2;
-  if (verdict === "Invalidated") return XCircle;
-  return Radar;
-}
-
 function confidenceLabel(value: number) {
   if (value >= 78) return "High";
   if (value >= 58) return "Medium";
   return "Low";
+}
+
+function VerdictGlyph({ verdict }: { verdict: string }) {
+  if (verdict === "Validated") {
+    return <CheckCircle2 size={28} className="mt-1 text-[var(--primary)]" />;
+  }
+  if (verdict === "Invalidated") {
+    return <XCircle size={28} className="mt-1 text-[var(--primary)]" />;
+  }
+  return <Radar size={28} className="mt-1 text-[var(--primary)]" />;
 }
 
 function PhraseChip({
@@ -112,8 +116,6 @@ export function IdeaValidator() {
   const [copied, setCopied] = useState(false);
 
   const canSubmit = ideaTitle.trim().length > 1 && ideaBody.trim().length > 12;
-  const VerdictIcon = verdictIcon(report?.verdict ?? "Promising");
-
   const progressCopy = useMemo(
     () => [
       "Building a synthetic audience",
@@ -337,7 +339,7 @@ export function IdeaValidator() {
                       <span>{report.audience}</span>
                     </div>
                     <div className="flex items-start gap-3">
-                      <VerdictIcon size={28} className="mt-1 text-[var(--primary)]" />
+                      <VerdictGlyph verdict={report.verdict} />
                       <div>
                         <h2 className="text-3xl font-medium tracking-tight">
                           {report.verdict}
@@ -484,4 +486,3 @@ export function IdeaValidator() {
     </main>
   );
 }
-

@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# tribeIdeas
 
-## Getting Started
+Validate startup ideas, LinkedIn posts, pitches, and launch concepts with a live audience simulation and TRIBE v2-derived brain response references.
 
-First, run the development server:
+## What It Does
+
+tribeIdeas takes an idea and produces:
+
+- a validation verdict and confidence rating
+- simulated audience split inspired by MiroFish-style swarm thinking
+- hoverable phrase insights
+- TRIBE v2-derived brain reference visualization
+- top questions, objections, and a stronger rewrite
+
+The MVP is intentionally Vercel-friendly. It does **not** run the full TRIBE v2 checkpoint in a serverless function. The brain panel uses lightweight reference archetypes that can later be replaced by a real GPU inference worker.
+
+## Local Setup
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Without `DEEPSEEK_API_KEY`, the app uses the local validation engine. With a key, `/api/validate` asks DeepSeek to enhance the report while preserving the same report schema.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment
 
-## Learn More
+```env
+DEEPSEEK_API_KEY=
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-chat
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Verification
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run lint
+npm run typecheck
+npm run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+Deploy the repo to Vercel and add the DeepSeek environment variables in the Vercel dashboard. The app builds as a standard Next.js App Router project.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## TRIBE v2 Note
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+TRIBE v2 is licensed CC-BY-NC-4.0. This MVP presents brain response as a reference visualization, not mind reading, medical advice, therapy, or individualized fMRI prediction.
+

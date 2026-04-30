@@ -55,6 +55,14 @@ function getActivationCenter(signal: BrainAdSignal) {
   );
 }
 
+function brainSpace(point: Vec3): Vec3 {
+  return {
+    x: point.x * 0.78 + 0.2,
+    y: point.y * 0.82 - 0.5,
+    z: point.z * 0.82,
+  };
+}
+
 function rotatePoint(point: Vec3, orbit: OrbitState): Vec3 {
   const rx = (orbit.rotateX * Math.PI) / 180;
   const ry = (orbit.rotateY * Math.PI) / 180;
@@ -175,6 +183,7 @@ function drawHumanHeadShell(
 ) {
   const shellAlpha = skullMode === "Open" ? 0.22 : 0.38;
   const edgeAlpha = skullMode === "Open" ? 0.2 : 0.32;
+  const mainProfile = headProfile.map(({ x, y }) => ({ x, y, z: 0.04 }));
   const slices = [-0.7, -0.42, -0.18, 0.08, 0.34, 0.62]
     .map((z, index) => {
       const taper = 1 - Math.abs(z) * 0.16;
@@ -191,6 +200,17 @@ function drawHumanHeadShell(
     .sort((a, b) => a.averageZ - b.averageZ);
 
   ctx.save();
+  ctx.beginPath();
+  projectedPath(ctx, mainProfile, width, height, orbit);
+  ctx.closePath();
+  ctx.fillStyle = `rgba(255,255,255,${skullMode === "Open" ? 0.08 : 0.16})`;
+  ctx.strokeStyle = `rgba(255,255,255,${skullMode === "Open" ? 0.22 : 0.36})`;
+  ctx.lineWidth = 1.6;
+  ctx.shadowColor = "rgba(255,255,255,0.12)";
+  ctx.shadowBlur = 18;
+  ctx.fill();
+  ctx.stroke();
+
   slices.forEach((slice) => {
     const isMiddle = slice.index === 2 || slice.index === 3;
     ctx.beginPath();
@@ -298,7 +318,7 @@ function BrainVolumeCanvas({
         const projectedRow: Array<ReturnType<typeof projectPoint> & Vec3> = [];
         for (let col = 0; col < cols; col += 1) {
           const point = cortexPoint(row, col, rows, cols, inflated);
-          const projected = projectPoint(point, width, height, orbit);
+          const projected = projectPoint(brainSpace(point), width, height, orbit);
           const shade = clamp(0.48 + projected.z * 0.18 + Math.sin(row * 0.7 + col * 0.25) * 0.08, 0.28, 0.94);
           const stored = { ...point, ...projected, shade };
           projectedRow.push(stored);
@@ -382,7 +402,7 @@ function BrainVolumeCanvas({
 
       const pickTargets: PickTarget[] = [];
       report.brainSignals.forEach((signal) => {
-        const center = projectPoint(getActivationCenter(signal), width, height, orbit);
+        const center = projectPoint(brainSpace(getActivationCenter(signal)), width, height, orbit);
         const isActive = signal.id === selectedId;
         const radius = clamp((signal.value / 100) * Math.min(width, height) * 0.16 * orbit.zoom, 42, 110);
         const glow = ctx.createRadialGradient(center.x, center.y, 2, center.x, center.y, radius);
@@ -409,7 +429,7 @@ function BrainVolumeCanvas({
 
       const selectedSignal = report.brainSignals.find((signal) => signal.id === selectedId);
       if (selectedSignal) {
-        const center = projectPoint(getActivationCenter(selectedSignal), width, height, orbit);
+        const center = projectPoint(brainSpace(getActivationCenter(selectedSignal)), width, height, orbit);
         const labelX = width * 0.63;
         const labelY = height * 0.78;
         ctx.beginPath();
@@ -459,7 +479,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
   const [meshMode, setMeshMode] = useState<(typeof meshModes)[number]>("Normal");
   const [skullMode, setSkullMode] = useState<(typeof skullModes)[number]>("Open");
   const [activeSignal, setActiveSignal] = useState(report.brainSignals[1]?.id ?? report.brainSignals[0]?.id);
-  const [orbit, setOrbit] = useState<OrbitState>({ rotateX: -8, rotateY: -14, panX: 0, panY: 0, zoom: 1 });
+  const [orbit, setOrbit] = useState<OrbitState>({ rotateX: -6, rotateY: 0, panX: 0, panY: 0, zoom: 1 });
   const [isDragging, setIsDragging] = useState(false);
   const pickTargetsRef = useRef<PickTarget[]>([]);
   const dragStart = useRef<{
@@ -549,7 +569,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
   }
 
   function resetOrbit() {
-    setOrbit({ rotateX: -8, rotateY: -14, panX: 0, panY: 0, zoom: 1 });
+    setOrbit({ rotateX: -6, rotateY: 0, panX: 0, panY: 0, zoom: 1 });
   }
 
   return (

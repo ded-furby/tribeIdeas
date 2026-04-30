@@ -20,14 +20,14 @@ function getAnalysisSteps(mode: AdInputMode) {
     ? [
         "Reading video metadata from the browser preview",
         "Extracting the product and audience line",
-        "Running the fast DeepSeek chat refinement",
+        "Refining the creative readout",
         "Simulating viewer attention, trust, and recall",
         "Lighting up the predicted brain response",
       ]
     : [
         "Reading the reel link and public caption clues",
         "Looking for transcript-like context if the page allows it",
-        "Running the fast DeepSeek chat refinement",
+        "Refining the creative readout",
         "Simulating viewer attention, trust, and recall",
         "Lighting up the predicted brain response",
       ];
@@ -114,7 +114,7 @@ function AnalysisProgress({ mode, elapsedMs }: { mode: AdInputMode; elapsedMs: n
           </div>
 
           <p className="mt-5 text-sm leading-6 text-white/48">
-            If DeepSeek is slow, AdCortex automatically falls back to the local predictor so the brain readout still lands quickly.
+            If the network is slow, AdCortex keeps the readout moving and returns the fastest complete prediction.
           </p>
         </div>
       </div>
@@ -131,7 +131,6 @@ export function AdCortexApp() {
   const [duration, setDuration] = useState<number | undefined>();
   const [previewUrl, setPreviewUrl] = useState("");
   const [report, setReport] = useState<AdPredictionReport | null>(null);
-  const [engineMode, setEngineMode] = useState<"deepseek" | "local" | null>(null);
   const [loading, setLoading] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [error, setError] = useState("");
@@ -170,7 +169,6 @@ export function AdCortexApp() {
     if (!canAnalyze || loading) return;
     setLoading(true);
     setReport(null);
-    setEngineMode(null);
     setElapsedMs(0);
     setError("");
     setCopied(false);
@@ -201,11 +199,10 @@ export function AdCortexApp() {
         await wait(remainingProgressMs);
       }
       setReport(payload.report);
-      setEngineMode(payload.mode === "deepseek" ? "deepseek" : "local");
     } catch (err) {
       setError(
         err instanceof Error && err.name === "AbortError"
-          ? "Analysis took too long. DeepSeek may be unreachable, so try again or run without the API key for instant local mode."
+          ? "Analysis took too long. Try again with a shorter link or upload the video file directly."
           : err instanceof Error
             ? err.message
             : "Could not analyze ad",
@@ -342,9 +339,7 @@ export function AdCortexApp() {
               </div>
             ) : report ? (
               <div className="rounded-[24px] border border-white/10 bg-black/34 p-4 backdrop-blur-2xl">
-                <div className="text-xs uppercase tracking-[0.16em] text-white/42">
-                  detected · {engineMode === "deepseek" ? "fast DeepSeek" : "local fallback"}
-                </div>
+                <div className="text-xs uppercase tracking-[0.16em] text-white/42">detected product</div>
                 <p className="mt-2 text-sm leading-6 text-white/78">{report.detectedProduct}</p>
                 <p className="mt-4 text-xs leading-5 text-white/42">{report.transcriptSummary}</p>
               </div>

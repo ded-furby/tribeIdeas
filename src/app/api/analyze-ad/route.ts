@@ -6,7 +6,7 @@ import type { AdPredictionReport } from "@/lib/ad-model";
 export const runtime = "nodejs";
 
 const LINK_CONTEXT_TIMEOUT_MS = 1800;
-const DEFAULT_DEEPSEEK_TIMEOUT_MS = 9000;
+const DEFAULT_MODEL_TIMEOUT_MS = 9000;
 
 const adSchema = z.object({
   title: z.string().min(2).max(140).optional(),
@@ -95,13 +95,13 @@ async function getLinkContext(url?: string) {
   }
 }
 
-async function enhanceWithDeepSeek(seed: AdPredictionReport) {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+async function enhanceWithModel(seed: AdPredictionReport) {
+  const apiKey = process.env.AI_API_KEY;
   if (!apiKey) return null;
 
-  const baseUrl = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
-  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
-  const timeoutMs = Number(process.env.DEEPSEEK_TIMEOUT_MS ?? DEFAULT_DEEPSEEK_TIMEOUT_MS);
+  const baseUrl = process.env.AI_BASE_URL ?? "https://api.provider.com";
+  const model = process.env.AI_MODEL ?? "chat-model";
+  const timeoutMs = Number(process.env.AI_TIMEOUT_MS ?? DEFAULT_MODEL_TIMEOUT_MS);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -137,7 +137,7 @@ async function enhanceWithDeepSeek(seed: AdPredictionReport) {
     });
 
     if (!response.ok) {
-      throw new Error(`DeepSeek request failed with ${response.status}`);
+      throw new Error(`Model request failed with ${response.status}`);
     }
 
     const payload = await response.json();
@@ -146,7 +146,7 @@ async function enhanceWithDeepSeek(seed: AdPredictionReport) {
     return extractJson(content) as AdPredictionReport;
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`DeepSeek timed out after ${Math.round(timeoutMs / 1000)}s`);
+      throw new Error(`Model request timed out after ${Math.round(timeoutMs / 1000)}s`);
     }
     throw error;
   } finally {
@@ -177,21 +177,21 @@ export async function POST(request: Request) {
     });
 
     try {
-      const enhanced = await enhanceWithDeepSeek(seed);
+      const enhanced = await enhanceWithModel(seed);
       return NextResponse.json({
         ok: true,
-        mode: enhanced ? "deepseek" : "local",
+        mode: enhanced ? "model" : "instant",
         report: enhanced ?? seed,
       });
     } catch (error) {
       return NextResponse.json({
         ok: true,
-        mode: "local",
+        mode: "instant",
         report: {
           ...seed,
-          sourceNote: `${seed.sourceNote} DeepSeek enhancement was unavailable, so this used the local predictor.`,
+          sourceNote: `${seed.sourceNote} Model enhancement was unavailable, so this used the instant predictor.`,
         },
-        warning: error instanceof Error ? error.message : "DeepSeek unavailable",
+        warning: error instanceof Error ? error.message : "Model unavailable",
       });
     }
   } catch (error) {

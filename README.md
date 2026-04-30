@@ -26,15 +26,15 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-Without `DEEPSEEK_API_KEY`, the app uses the local ad predictor. With a key, `/api/analyze-ad` asks DeepSeek to sharpen the report while preserving the same schema. The default is the fast non-reasoning `deepseek-chat` model with a short timeout, then the app falls back to the local predictor instead of making the user wait.
+Without an API key, the app uses the instant ad predictor. With a compatible chat-completions key, `/api/analyze-ad` sharpens the report while preserving the same schema. The request has a short timeout so users are not left waiting.
 
 ## Environment
 
 ```env
-DEEPSEEK_API_KEY=
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-chat
-DEEPSEEK_TIMEOUT_MS=9000
+AI_API_KEY=
+AI_BASE_URL=https://api.provider.com
+AI_MODEL=chat-model
+AI_TIMEOUT_MS=9000
 ```
 
 ## Verification
@@ -47,7 +47,7 @@ npm run build
 
 ## Deployment
 
-Deploy the repo to Vercel and add the DeepSeek environment variables in the Vercel dashboard. The app builds as a standard Next.js App Router project.
+Deploy the repo to Vercel and add the model provider environment variables in the Vercel dashboard. The app builds as a standard Next.js App Router project.
 
 ## TRIBE v2 Note
 

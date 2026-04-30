@@ -22,12 +22,12 @@ function extractJson(text: string) {
   return JSON.parse(cleaned);
 }
 
-async function askDeepSeek(seed: ValidationReport): Promise<ValidationReport | null> {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+async function askModel(seed: ValidationReport): Promise<ValidationReport | null> {
+  const apiKey = process.env.AI_API_KEY;
   if (!apiKey) return null;
 
-  const baseUrl = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
-  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
+  const baseUrl = process.env.AI_BASE_URL ?? "https://api.provider.com";
+  const model = process.env.AI_MODEL ?? "chat-model";
 
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
     method: "POST",
@@ -58,7 +58,7 @@ async function askDeepSeek(seed: ValidationReport): Promise<ValidationReport | n
   });
 
   if (!response.ok) {
-    throw new Error(`DeepSeek request failed with ${response.status}`);
+    throw new Error(`Model request failed with ${response.status}`);
   }
 
   const payload = await response.json();
@@ -75,21 +75,21 @@ export async function POST(request: Request) {
     const seed = createLocalValidation(parsed);
 
     try {
-      const enhanced = await askDeepSeek(seed);
+      const enhanced = await askModel(seed);
       return NextResponse.json({
         ok: true,
         report: enhanced ?? seed,
-        mode: enhanced ? "deepseek" : "local",
+        mode: enhanced ? "model" : "instant",
       });
     } catch (error) {
       return NextResponse.json({
         ok: true,
         report: {
           ...seed,
-          confidenceReason: `${seed.confidenceReason} DeepSeek enhancement was unavailable, so this report used the local validation engine.`,
+          confidenceReason: `${seed.confidenceReason} Model enhancement was unavailable, so this report used the instant validation engine.`,
         },
-        mode: "local",
-        warning: error instanceof Error ? error.message : "DeepSeek unavailable",
+        mode: "instant",
+        warning: error instanceof Error ? error.message : "Model unavailable",
       });
     }
   } catch (error) {

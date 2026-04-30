@@ -120,7 +120,7 @@ export function IdeaValidator() {
   const [report, setReport] = useState<ValidationReport | null>(sampleReport);
   const [activePhrase, setActivePhrase] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"local" | "deepseek" | null>("local");
+  const [mode, setMode] = useState<"instant" | "model" | null>("instant");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -193,7 +193,7 @@ export function IdeaValidator() {
           </div>
           <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-[var(--muted)]">
             <span className="border border-[var(--hairline)] px-3 py-2">
-              DeepSeek-ready
+              model-ready
             </span>
             <span className="border border-[var(--hairline)] px-3 py-2">
               TRIBE reference maps
@@ -379,7 +379,7 @@ export function IdeaValidator() {
                 <div className="grid gap-0 md:grid-cols-[1fr_280px]">
                   <div className="border-b border-[var(--hairline)] p-5 md:border-b-0 md:border-r">
                     <div className="mb-3 flex flex-wrap items-center gap-2 font-mono text-xs text-[var(--muted)]">
-                      <span>{mode === "deepseek" ? "DeepSeek enhanced" : "Local engine"}</span>
+                      <span>{mode === "model" ? "model enhanced" : "instant engine"}</span>
                       <span>/</span>
                       <span>{report.context}</span>
                       <span>/</span>

@@ -33,6 +33,32 @@ function classifyFeeling(text: string, score: number) {
   return "mild interest";
 }
 
+function compactLine(value: string, fallback: string) {
+  return value
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/(?<=[.!?])\s+/)[0]
+    ?.slice(0, 160) || fallback;
+}
+
+function inferAudience(brief: string, fallback: string) {
+  const lower = brief.toLowerCase();
+  if (lower.includes("founder")) return "Founders";
+  if (lower.includes("creator")) return "Creators";
+  if (lower.includes("gen z") || lower.includes("student")) return "Gen Z scrollers";
+  if (lower.includes("b2b") || lower.includes("operator")) return "B2B operators";
+  if (lower.includes("buyer") || lower.includes("customer")) return "Cold buyers";
+  return fallback;
+}
+
+function inferProduct(brief: string, linkContext: string, fallback: string) {
+  const source = compactLine(brief || linkContext, fallback);
+  return source
+    .replace(/^this is for\s+/i, "")
+    .replace(/^a[n]?\s+/i, "")
+    .trim();
+}
+
 function buildBrainSignals(attention: number, trust: number, recall: number, friction: number): BrainAdSignal[] {
   return [
     {
@@ -142,11 +168,17 @@ function buildRounds(request: AdPredictionRequest, headline: string): Predictive
 }
 
 export function createLocalAdPrediction(request: AdPredictionRequest): AdPredictionReport {
+  const brief = request.brief?.trim() || `${request.product}. ${request.promise}`.trim();
+  const linkContext = request.linkContext?.trim() ?? "";
+  const inferredAudience = inferAudience(brief, String(request.audience));
+  const detectedProduct = inferProduct(brief, linkContext, request.product || "this product");
   const seedText = [
     request.title,
+    brief,
     request.product,
     request.promise,
     request.notes,
+    linkContext,
     request.reelUrl,
     request.uploadedFileName,
   ]
@@ -163,7 +195,7 @@ export function createLocalAdPrediction(request: AdPredictionRequest): AdPredict
 
   const attentionScore = clamp(56 + desire * 6 + emotion * 5 + (hasVideo ? 7 : 0) - durationPenalty + (hash % 9));
   const trustScore = clamp(48 + proof * 9 + request.promise.length / 18 - risk * 10 + ((hash >> 4) % 10));
-  const recallScore = clamp(50 + desire * 4 + proof * 4 + Math.min(request.product.length, 50) / 3 + ((hash >> 7) % 8));
+  const recallScore = clamp(50 + desire * 4 + proof * 4 + Math.min(detectedProduct.length, 50) / 3 + ((hash >> 7) % 8));
   const frictionScore = clamp(42 + risk * 10 + durationPenalty - proof * 5 - desire * 2 + ((hash >> 9) % 7));
   const confidence = clamp(attentionScore * 0.34 + trustScore * 0.28 + recallScore * 0.24 + (100 - frictionScore) * 0.14);
   const projectedLift = clamp(((attentionScore + trustScore + recallScore) / 3 - frictionScore) * 0.55, -18, 38);
@@ -180,8 +212,13 @@ export function createLocalAdPrediction(request: AdPredictionRequest): AdPredict
   return {
     id: `ad_${Date.now().toString(36)}_${(hash % 100000).toString(36)}`,
     title: request.title || "Untitled ad",
-    audience: String(request.audience),
+    audience: inferredAudience,
     goal: String(request.goal),
+    detectedProduct,
+    transcriptSummary: linkContext
+      ? compactLine(linkContext, "Link context was read, but no clear transcript was available.")
+      : "No usable transcript found, so the prediction uses your one-line product context.",
+    brainSummary: `${activationLabel} lights up most: viewers are predicted to ${dominantFeeling === "trust" ? "look for proof and trust cues" : "notice the hook before deciding if it is useful"}.`,
     headline,
     outcome:
       projectedLift >= 18
@@ -197,9 +234,9 @@ export function createLocalAdPrediction(request: AdPredictionRequest): AdPredict
     frictionScore,
     dominantFeeling,
     activationLabel,
-    neuralReadout: `${activationLabel} is predicted to lead because the creative gives viewers a concrete scene, emotional hook, or memory cue before the offer is fully explained.`,
+    neuralReadout: `${activationLabel}: ${dominantFeeling}, ${confidence}/100 confidence.`,
     brainSignals,
-    viewerSegments: buildSegments(String(request.audience), attentionScore, trustScore, frictionScore),
+    viewerSegments: buildSegments(inferredAudience, attentionScore, trustScore, frictionScore),
     predictiveRounds: buildRounds(request, headline),
     timeline: [
       {

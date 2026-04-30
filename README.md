@@ -9,10 +9,12 @@ tribeIdeas takes an idea and produces:
 - a validation verdict and confidence rating
 - simulated audience split inspired by MiroFish-style swarm thinking
 - hoverable phrase insights
-- TRIBE v2-derived brain reference visualization
+- an fsaverage cortical-surface brain render with interactive response hotspots
 - top questions, objections, and a stronger rewrite
 
 The MVP is intentionally Vercel-friendly. It does **not** run the full TRIBE v2 checkpoint in a serverless function. The brain panel uses lightweight reference archetypes that can later be replaced by a real GPU inference worker.
+
+The first screen opens with a sample report already rendered, so users immediately see the animated swarm world, verdict, confidence score, phrase popovers, and brain response map before running their own idea.
 
 ## Local Setup
 
@@ -49,4 +51,3 @@ Deploy the repo to Vercel and add the DeepSeek environment variables in the Verc
 ## TRIBE v2 Note
 
 TRIBE v2 is licensed CC-BY-NC-4.0. This MVP presents brain response as a reference visualization, not mind reading, medical advice, therapy, or individualized fMRI prediction.
-

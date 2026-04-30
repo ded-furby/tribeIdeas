@@ -512,8 +512,8 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
           }
         : {
             ...current,
-            rotateX: clamp(drag.rotateX - dy * 0.16, -34, 28),
-            rotateY: clamp(drag.rotateY + dx * 0.2, -48, 48),
+            rotateX: clamp(drag.rotateX - dy * 0.18, -68, 62),
+            rotateY: clamp(drag.rotateY + dx * 0.28, -180, 180),
           },
     );
   }
@@ -544,7 +544,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
     event.preventDefault();
     setOrbit((current) => ({
       ...current,
-      zoom: clamp(current.zoom - event.deltaY * 0.0012, 0.82, 1.28),
+      zoom: clamp(current.zoom - event.deltaY * 0.0012, 0.7, 1.46),
     }));
   }
 
@@ -556,7 +556,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
     <section className="relative min-h-[560px] overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-[0_28px_120px_rgba(0,0,0,0.58)] sm:min-h-[640px]">
       <div className="absolute left-5 top-5 z-40 flex items-center gap-3 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-xs text-white/72 shadow-2xl backdrop-blur-2xl">
         <span className="h-2 w-2 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,0.7)]" />
-        Drag orbit · wheel zoom
+        Drag orbit · wheel zoom · double-click reset
       </div>
 
       <div className="absolute right-5 top-5 z-40 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-xs text-white/72 shadow-2xl backdrop-blur-2xl">

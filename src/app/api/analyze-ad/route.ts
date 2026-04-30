@@ -43,12 +43,21 @@ function readMeta(html: string, name: string) {
 
 function cleanHtmlText(html: string) {
   return html
+    .replace(/\\u003c/gi, "<")
+    .replace(/\\u003e/gi, ">")
+    .replace(/\\u0026/g, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&nbsp;/gi, " ")
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/data:image\/[a-zA-Z+.-]+;base64,[^\s"'<]+/g, " ")
     .replace(/<[^>]+>/g, " ")
+    .replace(/\b(?:width|height|style|src|class|loading|alt)=["']?[^"'\s]+["']?/gi, " ")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&amp;/g, "&")
+    .replace(/\bInstagram\s+Instagram\b/gi, "Instagram")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -68,23 +77,26 @@ async function getLinkContext(url?: string) {
     });
     if (!response.ok) return "";
     const html = (await response.text()).slice(0, 140_000);
-    const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "";
+    const title = cleanHtmlText(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "");
     const meta = [
       readMeta(html, "og:title"),
       readMeta(html, "og:description"),
       readMeta(html, "twitter:title"),
       readMeta(html, "twitter:description"),
       readMeta(html, "description"),
-    ].filter(Boolean);
+    ]
+      .map(cleanHtmlText)
+      .filter((item) => item && !/data:image|base64|<img|width=|height=/i.test(item));
     const caption =
       html.match(/"shortDescription":"([^"]+)"/)?.[1] ??
       html.match(/"captionTracks":\[(.*?)\]/)?.[1] ??
       "";
     const visible = cleanHtmlText(html).slice(0, 650);
-    return [title, ...meta, caption, visible]
+    return [title, ...meta, cleanHtmlText(caption), visible]
       .join(" ")
-      .replace(/\\u0026/g, "&")
       .replace(/\\"/g, '"')
+      .replace(/data:image\/[a-zA-Z+.-]+;base64,[^\s"'<]+/g, " ")
+      .replace(/\b(?:width|height|style|src|class|loading|alt)=["']?[^"'\s]+["']?/gi, " ")
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 1250);

@@ -18,6 +18,7 @@ export type AdGoal =
 export type AdPredictionRequest = {
   title: string;
   mode: AdInputMode;
+  brief?: string;
   reelUrl?: string;
   uploadedFileName?: string;
   uploadedFileSize?: number;
@@ -27,6 +28,7 @@ export type AdPredictionRequest = {
   product: string;
   promise: string;
   notes?: string;
+  linkContext?: string;
 };
 
 export type BrainAdSignal = {
@@ -64,6 +66,9 @@ export type AdPredictionReport = {
   title: string;
   audience: string;
   goal: string;
+  detectedProduct: string;
+  transcriptSummary: string;
+  brainSummary: string;
   headline: string;
   outcome: string;
   confidence: number;

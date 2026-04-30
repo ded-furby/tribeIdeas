@@ -33,6 +33,8 @@ type PickTarget = {
   radius: number;
 };
 
+type BrainSurfacePoint = ReturnType<typeof projectPoint> & Vec3 & { shade: number };
+
 const activationCenters: Record<string, Vec3> = {
   visual: { x: 1.18, y: -0.14, z: 0.42 },
   place: { x: 1.12, y: 0.34, z: 0.33 },
@@ -348,30 +350,65 @@ function BrainVolumeCanvas({
 
       drawHumanHeadShell(ctx, width, height, orbit, skullMode);
 
-      const rows = 28;
-      const cols = 54;
+      const rows = 36;
+      const cols = 72;
       const inflated = meshMode === "Inflated";
-      const grid: Array<Array<ReturnType<typeof projectPoint> & Vec3>> = [];
-      const particles: Array<ReturnType<typeof projectPoint> & { shade: number }> = [];
+      const grid: BrainSurfacePoint[][] = [];
 
       for (let row = 0; row < rows; row += 1) {
-        const projectedRow: Array<ReturnType<typeof projectPoint> & Vec3> = [];
+        const projectedRow: BrainSurfacePoint[] = [];
         for (let col = 0; col < cols; col += 1) {
           const point = cortexPoint(row, col, rows, cols, inflated);
           const projected = projectPoint(brainSpace(point), width, height, orbit);
-          const shade = clamp(0.48 + projected.z * 0.18 + Math.sin(row * 0.7 + col * 0.25) * 0.08, 0.28, 0.94);
+          const shade = clamp(
+            0.56 +
+              projected.z * 0.2 +
+              Math.sin(row * 0.58 + col * 0.18) * 0.08 +
+              Math.cos(col * 0.34 - row * 0.22) * 0.06,
+            0.24,
+            0.98,
+          );
           const stored = { ...point, ...projected, shade };
           projectedRow.push(stored);
-          particles.push(stored);
         }
         grid.push(projectedRow);
       }
 
+      const cells: Array<{
+        z: number;
+        shade: number;
+        points: [BrainSurfacePoint, BrainSurfacePoint, BrainSurfacePoint, BrainSurfacePoint];
+      }> = [];
+      for (let row = 0; row < rows - 1; row += 1) {
+        for (let col = 0; col < cols - 1; col += 1) {
+          const points = [grid[row][col], grid[row][col + 1], grid[row + 1][col + 1], grid[row + 1][col]] as const;
+          cells.push({
+            z: points.reduce((sum, point) => sum + point.z, 0) / points.length,
+            shade: points.reduce((sum, point) => sum + point.shade, 0) / points.length,
+            points,
+          });
+        }
+      }
+
       ctx.save();
-      ctx.shadowColor = "rgba(255,255,255,0.18)";
-      ctx.shadowBlur = 22;
+      cells
+        .sort((a, b) => a.z - b.z)
+        .forEach((cell) => {
+          const light = Math.round(148 + cell.shade * 104);
+          ctx.beginPath();
+          ctx.moveTo(cell.points[0].x, cell.points[0].y);
+          ctx.lineTo(cell.points[1].x, cell.points[1].y);
+          ctx.lineTo(cell.points[2].x, cell.points[2].y);
+          ctx.lineTo(cell.points[3].x, cell.points[3].y);
+          ctx.closePath();
+          ctx.fillStyle = `rgba(${light},${light},${light},0.9)`;
+          ctx.fill();
+        });
+      ctx.restore();
+
+      ctx.save();
+      ctx.globalCompositeOperation = "multiply";
       ctx.lineCap = "round";
-      ctx.lineJoin = "round";
       for (let row = 2; row < rows - 2; row += 2) {
         ctx.beginPath();
         for (let col = 2; col < cols - 2; col += 1) {
@@ -379,11 +416,8 @@ function BrainVolumeCanvas({
           if (col === 2) ctx.moveTo(point.x, point.y);
           else ctx.lineTo(point.x, point.y);
         }
-        ctx.strokeStyle = "rgba(235,235,235,0.28)";
-        ctx.lineWidth = inflated ? 9 : 7;
-        ctx.stroke();
-        ctx.strokeStyle = "rgba(255,255,255,0.26)";
-        ctx.lineWidth = inflated ? 4 : 3;
+        ctx.strokeStyle = "rgba(32,32,32,0.34)";
+        ctx.lineWidth = inflated ? 7 : 5;
         ctx.stroke();
       }
       for (let col = 5; col < cols - 4; col += 5) {
@@ -393,52 +427,71 @@ function BrainVolumeCanvas({
           if (row === 3) ctx.moveTo(point.x, point.y);
           else ctx.lineTo(point.x, point.y);
         }
-        ctx.strokeStyle = "rgba(130,130,130,0.2)";
-        ctx.lineWidth = inflated ? 7 : 5;
+        ctx.strokeStyle = "rgba(30,30,30,0.22)";
+        ctx.lineWidth = inflated ? 5 : 3.5;
         ctx.stroke();
       }
       ctx.restore();
 
       ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.shadowColor = "rgba(255,255,255,0.3)";
+      ctx.shadowBlur = 16;
       ctx.lineCap = "round";
-      for (let row = 2; row < rows - 2; row += 3) {
+      ctx.lineJoin = "round";
+      for (let row = 2; row < rows - 2; row += 2) {
         ctx.beginPath();
         for (let col = 2; col < cols - 2; col += 1) {
           const point = grid[row][col];
           if (col === 2) ctx.moveTo(point.x, point.y);
           else ctx.lineTo(point.x, point.y);
         }
-        ctx.strokeStyle = "rgba(95,95,95,0.46)";
-        ctx.lineWidth = 2.2;
-        ctx.stroke();
         ctx.strokeStyle = "rgba(255,255,255,0.34)";
-        ctx.lineWidth = 0.8;
+        ctx.lineWidth = inflated ? 5.5 : 4.2;
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,0.58)";
+        ctx.lineWidth = inflated ? 2.2 : 1.5;
+        ctx.stroke();
+      }
+      for (let col = 5; col < cols - 4; col += 5) {
+        ctx.beginPath();
+        for (let row = 3; row < rows - 3; row += 1) {
+          const point = grid[row][col];
+          if (row === 3) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        }
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.lineWidth = inflated ? 3.4 : 2.4;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.lineCap = "round";
+      for (let row = 2; row < rows - 2; row += 4) {
+        ctx.beginPath();
+        for (let col = 2; col < cols - 2; col += 1) {
+          const point = grid[row][col];
+          if (col === 2) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        }
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 0.7;
         ctx.stroke();
       }
 
-      for (let col = 4; col < cols - 3; col += 6) {
+      for (let col = 4; col < cols - 3; col += 8) {
         ctx.beginPath();
         for (let row = 2; row < rows - 2; row += 1) {
           const point = grid[row][col];
           if (row === 2) ctx.moveTo(point.x, point.y);
           else ctx.lineTo(point.x, point.y);
         }
-        ctx.strokeStyle = "rgba(74,74,74,0.38)";
-        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.lineWidth = 0.7;
         ctx.stroke();
       }
       ctx.restore();
-
-      particles
-        .sort((a, b) => a.z - b.z)
-        .forEach((point) => {
-          const radius = clamp(point.scale * 0.018, 1.15, 2.9);
-          const light = Math.round(205 + point.shade * 50);
-          ctx.beginPath();
-          ctx.fillStyle = `rgba(${light},${light},${light},${0.5 + point.shade * 0.4})`;
-          ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-          ctx.fill();
-        });
 
       const pickTargets: PickTarget[] = [];
       report.brainSignals.forEach((signal) => {

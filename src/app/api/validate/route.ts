@@ -27,7 +27,7 @@ async function askDeepSeek(seed: ValidationReport): Promise<ValidationReport | n
   if (!apiKey) return null;
 
   const baseUrl = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
-  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
+  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-v4-pro";
 
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
     method: "POST",
@@ -105,4 +105,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

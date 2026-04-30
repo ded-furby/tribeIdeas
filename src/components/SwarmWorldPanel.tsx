@@ -52,6 +52,7 @@ export function SwarmWorldPanel({ report }: SwarmWorldPanelProps) {
                 stroke="#3a3831"
                 strokeWidth="0.35"
                 strokeDasharray="1 1.8"
+                className="swarm-line"
               />
             )),
           )}
@@ -61,7 +62,12 @@ export function SwarmWorldPanel({ report }: SwarmWorldPanelProps) {
           <div
             key={node.label}
             className="absolute z-20 w-44 -translate-x-1/2 -translate-y-1/2 border border-[var(--hairline-strong)] bg-[rgba(17,17,15,0.88)] p-3 backdrop-blur"
-            style={{ left: `${node.x}%`, top: `${node.y}%` }}
+            style={{
+              left: `${node.x}%`,
+              top: `${node.y}%`,
+              animation: "node-breathe 3.4s ease-in-out infinite",
+              animationDelay: `${index * 0.32}s`,
+            }}
           >
             <div className="flex items-center justify-between gap-2">
               <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]">
@@ -89,6 +95,10 @@ export function SwarmWorldPanel({ report }: SwarmWorldPanelProps) {
             <div
               key={phase}
               className="border border-[var(--hairline)] bg-black/50 px-3 py-2 backdrop-blur"
+              style={{
+                animation: "phase-glow 4s ease-in-out infinite",
+                animationDelay: `${index * 0.22}s`,
+              }}
             >
               <div className="font-mono text-[10px] text-[var(--primary)]">
                 0{index + 1}
@@ -156,4 +166,3 @@ export function SwarmWorldPanel({ report }: SwarmWorldPanelProps) {
     </section>
   );
 }
-

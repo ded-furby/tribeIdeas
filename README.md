@@ -33,7 +33,7 @@ Without `DEEPSEEK_API_KEY`, the app uses the local ad predictor. With a key, `/a
 ```env
 DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_MODEL=deepseek-v4-pro
 ```
 
 ## Verification

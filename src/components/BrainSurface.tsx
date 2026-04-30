@@ -24,7 +24,7 @@ export function BrainSurface({ archetypeId, regions }: BrainSurfaceProps) {
         <div>
           <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.14em] text-[var(--primary)]">
             <Brain size={16} />
-            TRIBE v2-derived brain reference
+            TRIBE v2-style cortical response map
           </div>
           <h2 className="mt-2 text-2xl font-medium tracking-tight">
             {archetype.label}
@@ -42,14 +42,15 @@ export function BrainSurface({ archetypeId, regions }: BrainSurfaceProps) {
       <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="relative min-h-[380px] overflow-hidden border-b border-[var(--hairline)] bg-[#0b0b09] lg:border-b-0 lg:border-r">
           <Image
-            src="/brain-assets/cortical-surface-reference.svg"
-            alt="Cortical brain surface reference map with activation heat spots"
+            src="/brain-assets/fsaverage-tribe-reference.png"
+            alt="Fsaverage cortical brain surface map with activation heat regions"
             width={1200}
             height={760}
             priority
-            className="h-full min-h-[420px] w-full object-cover"
+            className="h-full min-h-[420px] w-full object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#070706] via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_44%,transparent_0%,transparent_36%,rgba(0,0,0,0.22)_58%,rgba(0,0,0,0.72)_100%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#070706] via-[#070706]/70 to-transparent" />
           {archetype.activationPath.map((spot, index) => {
             const region = regions[index % regions.length];
             return (

@@ -377,7 +377,7 @@ function BrainVolumeCanvas({
       const cells: Array<{
         z: number;
         shade: number;
-        points: [BrainSurfacePoint, BrainSurfacePoint, BrainSurfacePoint, BrainSurfacePoint];
+        points: readonly [BrainSurfacePoint, BrainSurfacePoint, BrainSurfacePoint, BrainSurfacePoint];
       }> = [];
       for (let row = 0; row < rows - 1; row += 1) {
         for (let col = 0; col < cols - 1; col += 1) {

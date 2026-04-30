@@ -379,7 +379,7 @@ export function IdeaValidator() {
                 <div className="grid gap-0 md:grid-cols-[1fr_280px]">
                   <div className="border-b border-[var(--hairline)] p-5 md:border-b-0 md:border-r">
                     <div className="mb-3 flex flex-wrap items-center gap-2 font-mono text-xs text-[var(--muted)]">
-                      <span>{mode === "model" ? "model enhanced" : "instant engine"}</span>
+                      <span>{mode === "model" ? "model enhanced" : "fast readout"}</span>
                       <span>/</span>
                       <span>{report.context}</span>
                       <span>/</span>

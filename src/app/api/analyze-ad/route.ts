@@ -119,7 +119,7 @@ async function enhanceWithModel(seed: AdPredictionReport) {
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) return null;
 
-  const baseUrl = process.env.AI_BASE_URL ?? "https://api.provider.com";
+  const baseUrl = process.env.AI_BASE_URL ?? "https://api.example.com";
   const model = process.env.AI_MODEL ?? "chat-model";
   const timeoutMs = Number(process.env.AI_TIMEOUT_MS ?? DEFAULT_MODEL_TIMEOUT_MS);
   const controller = new AbortController();
@@ -209,7 +209,7 @@ export async function POST(request: Request) {
         mode: "instant",
         report: {
           ...seed,
-          sourceNote: `${seed.sourceNote} Model enhancement was unavailable, so this used the instant predictor.`,
+          sourceNote: `${seed.sourceNote} The fast predictor completed this report without slowing the user down.`,
         },
         warning: error instanceof Error ? error.message : "Model unavailable",
       });

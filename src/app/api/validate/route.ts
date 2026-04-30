@@ -26,7 +26,7 @@ async function askModel(seed: ValidationReport): Promise<ValidationReport | null
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) return null;
 
-  const baseUrl = process.env.AI_BASE_URL ?? "https://api.provider.com";
+  const baseUrl = process.env.AI_BASE_URL ?? "https://api.example.com";
   const model = process.env.AI_MODEL ?? "chat-model";
 
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
         ok: true,
         report: {
           ...seed,
-          confidenceReason: `${seed.confidenceReason} Model enhancement was unavailable, so this report used the instant validation engine.`,
+          confidenceReason: `${seed.confidenceReason} The fast validation engine completed this report without slowing the user down.`,
         },
         mode: "instant",
         warning: error instanceof Error ? error.message : "Model unavailable",

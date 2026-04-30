@@ -12,7 +12,7 @@ AdCortex takes a reel/video link or local video upload plus one line describing 
 - a MiroFish-inspired predictive simulation trace
 - specific ad edits and next A/B tests
 
-The MVP is intentionally Vercel-friendly. It does **not** run the full TRIBE v2 checkpoint in a serverless function. The brain panel uses a generated fsaverage cortical render plus lightweight predictive response signals that can later be replaced by a GPU inference worker. The brain stage is draggable; double-click it to reset the view.
+The MVP is intentionally Vercel-friendly. It does **not** run the full TRIBE v2 checkpoint in a serverless function. The brain panel uses an interactive procedural cortex render plus lightweight predictive response signals that can later be replaced by a GPU inference worker. The brain stage is draggable; double-click it to reset the view.
 
 Uploads are previewed locally in the browser. The API receives only creative metadata and the typed one-line context. For public links, the API makes a best-effort pass over title/meta/visible text and ignores it if blocked.
 
@@ -26,13 +26,13 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-Without an API key, the app uses the instant ad predictor. With a compatible chat-completions key, `/api/analyze-ad` sharpens the report while preserving the same schema. The request has a short timeout so users are not left waiting.
+Without an API key, the app uses the fast ad predictor. With a compatible chat-completions key, `/api/analyze-ad` sharpens the report while preserving the same schema. The request has a short timeout so users are not left waiting.
 
 ## Environment
 
 ```env
 AI_API_KEY=
-AI_BASE_URL=https://api.provider.com
+AI_BASE_URL=https://api.example.com
 AI_MODEL=chat-model
 AI_TIMEOUT_MS=9000
 ```

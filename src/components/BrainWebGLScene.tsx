@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { AdPredictionReport, BrainAdSignal } from "@/lib/ad-model";
 
 type OrbitState = {
@@ -213,6 +214,51 @@ function makeActivationSprite(size: number, opacity: number) {
   return sprite;
 }
 
+function disposeMaterial(material: THREE.Material | THREE.Material[]) {
+  if (Array.isArray(material)) {
+    material.forEach((item) => item.dispose());
+  } else {
+    material.dispose();
+  }
+}
+
+function fitBrainModel(model: THREE.Object3D, material: THREE.Material) {
+  model.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    if (mesh.material) {
+      disposeMaterial(mesh.material as THREE.Material | THREE.Material[]);
+    }
+    mesh.material = material;
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+  });
+
+  const bounds = new THREE.Box3().setFromObject(model);
+  const center = bounds.getCenter(new THREE.Vector3());
+  const size = bounds.getSize(new THREE.Vector3());
+  const maxAxis = Math.max(size.x, size.y, size.z, 0.001);
+  model.position.sub(center);
+  model.scale.setScalar(2.22 / maxAxis);
+  model.rotation.set(0.02, -Math.PI / 2, -0.02);
+}
+
+function disposeObject(object: THREE.Object3D, sharedMaterial: THREE.Material) {
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.geometry?.dispose();
+    const material = mesh.material as THREE.Material | THREE.Material[];
+    if (Array.isArray(material)) {
+      material.forEach((item) => {
+        if (item !== sharedMaterial) item.dispose();
+      });
+    } else if (material !== sharedMaterial) {
+      material.dispose();
+    }
+  });
+}
+
 export function BrainWebGLScene({
   report,
   selectedId,
@@ -271,6 +317,11 @@ export function BrainWebGLScene({
     });
     const brainMesh = new THREE.Mesh(makeBrainGeometry(meshMode === "Inflated"), brainMaterial);
     root.add(brainMesh);
+
+    const brainModelRoot = new THREE.Group();
+    brainModelRoot.position.copy(brainSpace({ x: 0, y: 0, z: 0 }));
+    brainModelRoot.visible = false;
+    root.add(brainModelRoot);
 
     const activations = new Map<string, THREE.Sprite>();
     report.brainSignals.forEach((signal) => {
@@ -348,6 +399,27 @@ export function BrainWebGLScene({
     resize();
     renderScene();
 
+    let disposed = false;
+    let loadedBrainModel: THREE.Object3D | null = null;
+    new GLTFLoader().load(
+      "/models/human-brain.glb",
+      (gltf) => {
+        if (disposed) return;
+        loadedBrainModel = gltf.scene;
+        fitBrainModel(loadedBrainModel, brainMaterial);
+        brainModelRoot.add(loadedBrainModel);
+        brainModelRoot.visible = true;
+        brainMesh.visible = false;
+        renderScene();
+      },
+      undefined,
+      () => {
+        brainModelRoot.visible = false;
+        brainMesh.visible = true;
+        renderScene();
+      },
+    );
+
     const observer = new ResizeObserver(() => {
       resize();
       renderScene();
@@ -355,6 +427,7 @@ export function BrainWebGLScene({
     observer.observe(canvasHost);
 
     return () => {
+      disposed = true;
       observer.disconnect();
       pickTargetsRef.current = [];
       if (renderer.domElement.parentNode === canvasHost) {
@@ -364,6 +437,9 @@ export function BrainWebGLScene({
         renderSceneRef.current = null;
       }
       brainMesh.geometry.dispose();
+      if (loadedBrainModel) {
+        disposeObject(loadedBrainModel, brainMaterial);
+      }
       brainMaterial.dispose();
       renderer.dispose();
       activations.forEach((sprite) => {

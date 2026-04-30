@@ -10,6 +10,18 @@ const proofWords = ["proof", "case study", "testimonial", "results", "before", "
 const desireWords = ["save", "faster", "easy", "launch", "grow", "better", "more", "one-click", "automatic"];
 const riskWords = ["guaranteed", "viral", "secret", "hack", "instant", "everyone", "never"];
 const emotionWords = ["feel", "love", "fear", "miss", "jealous", "trust", "calm", "excited", "proud"];
+const productHints = [
+  ["analytics", "AI ad analytics tool"],
+  ["dashboard", "performance analytics dashboard"],
+  ["agent", "AI agent workflow"],
+  ["automation", "automation product"],
+  ["skincare", "skincare product"],
+  ["serum", "skincare serum"],
+  ["course", "education offer"],
+  ["newsletter", "content product"],
+  ["app", "mobile app"],
+  ["saas", "SaaS product"],
+] as const;
 
 function clamp(value: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, Math.round(value)));
@@ -41,7 +53,43 @@ function compactLine(value: string, fallback: string) {
     ?.slice(0, 160) || fallback;
 }
 
-function inferAudience(brief: string, fallback: string) {
+function titleCase(value: string) {
+  return value
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`)
+    .join(" ");
+}
+
+function cleanOfferText(value: string) {
+  return value
+    .replace(/\b(this is|we are selling|we sell|it's|it is|basically|product is)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s:,-]+|[\s:,-]+$/g, "")
+    .trim();
+}
+
+function splitOffer(brief: string, linkContext: string, fallback: string) {
+  const source = cleanOfferText(compactLine(brief || linkContext, fallback));
+  const directFor = source.match(/\bfor\s+(.+?)(?:[,.]|$)/i);
+  const helpFor = source.match(/\b(?:built for|made for|targeted at|aimed at)\s+(.+?)(?:[,.]|$)/i);
+  const audiencePhrase = cleanOfferText((helpFor?.[1] ?? directFor?.[1] ?? "").replace(/\bwho\b.+$/i, ""));
+  const splitPattern = /\s+(?:for|built for|made for|targeted at|aimed at|to help)\s+/i;
+  const [productChunk] = source.split(splitPattern);
+
+  return {
+    source,
+    productChunk: cleanOfferText(productChunk || fallback),
+    audiencePhrase,
+  };
+}
+
+function inferAudience(brief: string, fallback: string, linkContext = "") {
+  const { audiencePhrase } = splitOffer(brief, linkContext, fallback);
+  if (audiencePhrase.length > 3) {
+    return titleCase(audiencePhrase.slice(0, 46));
+  }
+
   const lower = brief.toLowerCase();
   if (lower.includes("founder")) return "Founders";
   if (lower.includes("creator")) return "Creators";
@@ -52,14 +100,29 @@ function inferAudience(brief: string, fallback: string) {
 }
 
 function inferProduct(brief: string, linkContext: string, fallback: string) {
-  const source = compactLine(brief || linkContext, fallback);
-  return source
-    .replace(/^this is for\s+/i, "")
+  const { source, productChunk } = splitOffer(brief, linkContext, fallback);
+  const lower = source.toLowerCase();
+  const hinted = productHints.find(([needle]) => lower.includes(needle))?.[1];
+  const normalized = cleanOfferText(productChunk)
     .replace(/^a[n]?\s+/i, "")
-    .trim();
+    .replace(/\bthat\s+(?:helps|lets|allows)\b.+$/i, "")
+    .replace(/\bwith\b.+$/i, "")
+    .slice(0, 72);
+
+  if (hinted && (normalized.length < 5 || normalized.split(" ").length > 7)) return hinted;
+  if (hinted && hinted.toLowerCase().includes(normalized.toLowerCase())) return hinted;
+  if (normalized.length >= 5) return normalized;
+  return hinted ?? fallback;
 }
 
-function buildBrainSignals(attention: number, trust: number, recall: number, friction: number): BrainAdSignal[] {
+function buildBrainSignals(
+  attention: number,
+  trust: number,
+  recall: number,
+  friction: number,
+  product: string,
+  audience: string,
+): BrainAdSignal[] {
   return [
     {
       id: "visual",
@@ -67,7 +130,7 @@ function buildBrainSignals(attention: number, trust: number, recall: number, fri
       value: clamp(attention + 8),
       x: 70,
       y: 36,
-      meaning: "How strongly the first seconds are expected to stop the scroll.",
+      meaning: `Usually means motion, contrast, or a face-like cue is pulling attention. For ${audience}, show ${product} or the result in the first 2 seconds so the stop-scroll signal becomes product memory.`,
     },
     {
       id: "place",
@@ -75,7 +138,7 @@ function buildBrainSignals(attention: number, trust: number, recall: number, fri
       value: clamp(recall + 10),
       x: 73,
       y: 58,
-      meaning: "Whether the ad creates a scene people can mentally place themselves inside.",
+      meaning: `Usually means the viewer can imagine a concrete scene. For this ad, the scene should be: ${audience} using ${product}, then seeing a measurable before/after.`,
     },
     {
       id: "salience",
@@ -83,7 +146,7 @@ function buildBrainSignals(attention: number, trust: number, recall: number, fri
       value: clamp(attention * 0.72 + friction * 0.28),
       x: 61,
       y: 43,
-      meaning: "The moment where novelty, tension, or a surprising promise becomes noticeable.",
+      meaning: `Usually means the brain flags novelty or tension. Here it should attach to one sharp problem, not a broad promise, so ${audience} knows why to keep watching.`,
     },
     {
       id: "valuation",
@@ -91,7 +154,7 @@ function buildBrainSignals(attention: number, trust: number, recall: number, fri
       value: clamp(trust * 0.65 + recall * 0.35),
       x: 55,
       y: 49,
-      meaning: "How quickly viewers can turn the ad into personal value.",
+      meaning: `Usually means personal value is being calculated. If this region lags, the ad needs clearer proof that ${product} pays off for ${audience}.`,
     },
     {
       id: "language",
@@ -99,7 +162,7 @@ function buildBrainSignals(attention: number, trust: number, recall: number, fri
       value: clamp(trust + 4 - friction * 0.18),
       x: 46,
       y: 37,
-      meaning: "Whether the promise is easy to parse without replaying the ad.",
+      meaning: `Usually means the promise is easy to parse. Keep the spoken/written claim to one sentence, then show evidence instead of adding more claims.`,
     },
   ];
 }
@@ -170,8 +233,8 @@ function buildRounds(request: AdPredictionRequest, headline: string): Predictive
 export function createLocalAdPrediction(request: AdPredictionRequest): AdPredictionReport {
   const brief = request.brief?.trim() || `${request.product}. ${request.promise}`.trim();
   const linkContext = request.linkContext?.trim() ?? "";
-  const inferredAudience = inferAudience(brief, String(request.audience));
   const detectedProduct = inferProduct(brief, linkContext, request.product || "this product");
+  const inferredAudience = inferAudience(brief, String(request.audience), linkContext);
   const seedText = [
     request.title,
     brief,
@@ -200,8 +263,16 @@ export function createLocalAdPrediction(request: AdPredictionRequest): AdPredict
   const confidence = clamp(attentionScore * 0.34 + trustScore * 0.28 + recallScore * 0.24 + (100 - frictionScore) * 0.14);
   const projectedLift = clamp(((attentionScore + trustScore + recallScore) / 3 - frictionScore) * 0.55, -18, 38);
   const dominantFeeling = classifyFeeling(seedText, attentionScore);
-  const brainSignals = buildBrainSignals(attentionScore, trustScore, recallScore, frictionScore);
+  const brainSignals = buildBrainSignals(
+    attentionScore,
+    trustScore,
+    recallScore,
+    frictionScore,
+    detectedProduct,
+    inferredAudience,
+  );
   const activationLabel = [...brainSignals].sort((a, b) => b.value - a.value)[0]?.label ?? "Visual motion network";
+  const activationMeaning = brainSignals.find((signal) => signal.label === activationLabel)?.meaning ?? "";
   const headline =
     confidence >= 76
       ? "The ad should make viewers feel curious and ready to click."
@@ -216,9 +287,9 @@ export function createLocalAdPrediction(request: AdPredictionRequest): AdPredict
     goal: String(request.goal),
     detectedProduct,
     transcriptSummary: linkContext
-      ? compactLine(linkContext, "Link context was read, but no clear transcript was available.")
-      : "No usable transcript found, so the prediction uses your one-line product context.",
-    brainSummary: `${activationLabel} lights up most: viewers are predicted to ${dominantFeeling === "trust" ? "look for proof and trust cues" : "notice the hook before deciding if it is useful"}.`,
+      ? `Public link context suggests ${detectedProduct} for ${inferredAudience}. ${compactLine(linkContext, "No clear transcript was available.")}`
+      : `No usable transcript found. Interpreting the ad as ${detectedProduct} for ${inferredAudience}.`,
+    brainSummary: `${activationLabel} is predicted to lead. ${activationMeaning}`,
     headline,
     outcome:
       projectedLift >= 18
@@ -266,14 +337,14 @@ export function createLocalAdPrediction(request: AdPredictionRequest): AdPredict
     ],
     recommendations: [
       attentionScore < 72
-        ? "Move the final outcome into the first three seconds."
-        : "Keep the current opening, but make the product visible faster.",
+        ? `Open with the visible outcome of ${detectedProduct}, not a setup line.`
+        : `Keep the opening energy, but make ${detectedProduct} identifiable before the viewer has to infer it.`,
       trustScore < 70
-        ? "Add one hard proof element: number, screenshot, testimonial, or before/after."
+        ? `Add one hard proof element for ${inferredAudience}: number, screenshot, testimonial, or before/after.`
         : "Keep the proof compact so it does not slow the hook.",
       frictionScore > 54
         ? "Reduce the ask: one CTA, one landing promise, one next step."
-        : "Use the landing page headline to repeat the same promise as the ad.",
+        : `Use the landing page headline to repeat the exact ${detectedProduct} promise from the ad.`,
     ],
     experiments: [
       "Hook A: show the painful before state first.",

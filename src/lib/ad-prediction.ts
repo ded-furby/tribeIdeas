@@ -146,7 +146,7 @@ function buildBrainSignals(
       value: clamp(attention * 0.72 + friction * 0.28),
       x: 61,
       y: 43,
-      meaning: `Usually means the brain flags novelty or tension. Here it should attach to one sharp problem, not a broad promise, so ${audience} knows why to keep watching.`,
+      meaning: `Usually means the brain flags novelty or tension. Here it should attach to one sharp problem, not a broad promise, so the viewer knows why to keep watching.`,
     },
     {
       id: "valuation",

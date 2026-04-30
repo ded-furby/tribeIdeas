@@ -10,10 +10,33 @@ import {
   Play,
   Upload,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { BrainAdStage } from "@/components/BrainAdStage";
 import type { AdInputMode, AdPredictionReport } from "@/lib/ad-model";
+
+function getAnalysisSteps(mode: AdInputMode) {
+  return mode === "upload"
+    ? [
+        "Reading video metadata from the browser preview",
+        "Extracting the product and audience line",
+        "Running the fast DeepSeek chat refinement",
+        "Simulating viewer attention, trust, and recall",
+        "Lighting up the predicted brain response",
+      ]
+    : [
+        "Reading the reel link and public caption clues",
+        "Looking for transcript-like context if the page allows it",
+        "Running the fast DeepSeek chat refinement",
+        "Simulating viewer attention, trust, and recall",
+        "Lighting up the predicted brain response",
+      ];
+}
+
+function analysisStepIndex(elapsedMs: number, steps: string[]) {
+  const thresholds = [0, 1700, 3400, 5600, 7800];
+  return steps.reduce((active, _step, index) => (elapsedMs >= thresholds[index] ? index : active), 0);
+}
 
 function MetricPill({ label, value }: { label: string; value: number }) {
   return (
@@ -21,6 +44,75 @@ function MetricPill({ label, value }: { label: string; value: number }) {
       <div className="text-[11px] uppercase tracking-[0.16em] text-white/42">{label}</div>
       <div className="mt-1 text-2xl font-semibold text-white">{value}</div>
     </div>
+  );
+}
+
+function AnalysisProgress({ mode, elapsedMs }: { mode: AdInputMode; elapsedMs: number }) {
+  const steps = useMemo(() => getAnalysisSteps(mode), [mode]);
+  const activeIndex = analysisStepIndex(elapsedMs, steps);
+  const elapsedSeconds = Math.floor(elapsedMs / 1000);
+  const progress = Math.min(96, 9 + (elapsedMs / 10_000) * 87);
+  const subject = mode === "upload" ? "video" : "reel";
+
+  return (
+    <section className="relative min-h-[520px] overflow-hidden rounded-[32px] border border-white/10 bg-black/72 shadow-[0_28px_120px_rgba(0,0,0,0.58)] backdrop-blur-2xl sm:min-h-[680px]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.12),transparent_28rem)]" />
+      <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.42)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.42)_1px,transparent_1px)] [background-size:52px_52px]" />
+
+      <div className="relative z-10 grid min-h-[520px] place-items-center px-5 py-10 sm:min-h-[680px]">
+        <div className="w-full max-w-3xl rounded-[32px] border border-white/12 bg-white/[0.075] p-5 shadow-2xl backdrop-blur-2xl sm:p-7">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="grid h-12 w-12 place-items-center rounded-2xl border border-white/14 bg-white text-black">
+                <Loader2 size={22} className="animate-spin" />
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-white/46">live analysis</div>
+                <h2 className="text-2xl font-semibold text-white">Analyzing the {subject}</h2>
+              </div>
+            </div>
+            <div className="rounded-full border border-white/12 bg-black/34 px-4 py-2 font-mono text-xs text-white/58">
+              t+{elapsedSeconds}s
+            </div>
+          </div>
+
+          <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-white transition-[width] duration-500 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+
+          <div className="mt-6 grid gap-2">
+            {steps.map((step, index) => {
+              const done = index < activeIndex;
+              const active = index === activeIndex;
+              return (
+                <div
+                  key={step}
+                  className={`flex items-center gap-3 rounded-[20px] border px-4 py-3 transition ${
+                    active
+                      ? "border-white/24 bg-white/[0.11] text-white"
+                      : done
+                        ? "border-white/12 bg-white/[0.055] text-white/62"
+                        : "border-white/8 bg-black/24 text-white/34"
+                  }`}
+                >
+                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-white/14 bg-black/28">
+                    {done ? <Check size={14} /> : active ? <Loader2 size={14} className="animate-spin" /> : index + 1}
+                  </div>
+                  <span className="text-sm font-medium">{step}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="mt-5 text-sm leading-6 text-white/48">
+            If DeepSeek is slow, AdCortex automatically falls back to the local predictor so the brain readout still lands quickly.
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -33,11 +125,26 @@ export function AdCortexApp() {
   const [duration, setDuration] = useState<number | undefined>();
   const [previewUrl, setPreviewUrl] = useState("");
   const [report, setReport] = useState<AdPredictionReport | null>(null);
+  const [engineMode, setEngineMode] = useState<"deepseek" | "local" | null>(null);
   const [loading, setLoading] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState(0);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
   const canAnalyze = brief.trim().length > 4 && (mode === "upload" ? Boolean(fileName) : reelUrl.trim().length > 5);
+  const activeSteps = useMemo(() => getAnalysisSteps(mode), [mode]);
+  const activeProgressText = activeSteps[analysisStepIndex(elapsedMs, activeSteps)];
+
+  useEffect(() => {
+    if (!loading) return;
+
+    const startedAt = Date.now();
+    const interval = window.setInterval(() => {
+      setElapsedMs(Date.now() - startedAt);
+    }, 350);
+
+    return () => window.clearInterval(interval);
+  }, [loading]);
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -52,12 +159,19 @@ export function AdCortexApp() {
   async function analyzeAd() {
     if (!canAnalyze || loading) return;
     setLoading(true);
+    setReport(null);
+    setEngineMode(null);
+    setElapsedMs(0);
     setError("");
     setCopied(false);
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 24_000);
 
     try {
       const response = await fetch("/api/analyze-ad", {
         method: "POST",
+        signal: controller.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: fileName || "Ad creative",
@@ -72,9 +186,17 @@ export function AdCortexApp() {
       const payload = await response.json();
       if (!payload.ok) throw new Error(payload.error ?? "Could not analyze ad");
       setReport(payload.report);
+      setEngineMode(payload.mode === "deepseek" ? "deepseek" : "local");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not analyze ad");
+      setError(
+        err instanceof Error && err.name === "AbortError"
+          ? "Analysis took too long. DeepSeek may be unreachable, so try again or run without the API key for instant local mode."
+          : err instanceof Error
+            ? err.message
+            : "Could not analyze ad",
+      );
     } finally {
+      window.clearTimeout(timeout);
       setLoading(false);
     }
   }
@@ -129,7 +251,7 @@ export function AdCortexApp() {
               className="flex h-[52px] items-center justify-center gap-2 rounded-[18px] bg-white px-5 text-sm font-semibold text-black shadow-[0_18px_50px_rgba(255,255,255,0.14)] transition hover:bg-[#e8e8e8] disabled:cursor-not-allowed disabled:bg-white/14 disabled:text-white/35"
             >
               {loading ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} />}
-              Analyze
+              {loading ? (mode === "upload" ? "Analyzing video" : "Analyzing reel") : "Analyze"}
             </button>
           </div>
         </header>
@@ -192,9 +314,22 @@ export function AdCortexApp() {
               </div>
             )}
 
-            {report ? (
+            {loading ? (
               <div className="rounded-[24px] border border-white/10 bg-black/34 p-4 backdrop-blur-2xl">
-                <div className="text-xs uppercase tracking-[0.16em] text-white/42">detected</div>
+                <div className="text-xs uppercase tracking-[0.16em] text-white/42">currently</div>
+                <p className="mt-2 text-sm leading-6 text-white/78">{activeProgressText}</p>
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-white transition-[width] duration-500"
+                    style={{ width: `${Math.min(96, 12 + (elapsedMs / 10_000) * 84)}%` }}
+                  />
+                </div>
+              </div>
+            ) : report ? (
+              <div className="rounded-[24px] border border-white/10 bg-black/34 p-4 backdrop-blur-2xl">
+                <div className="text-xs uppercase tracking-[0.16em] text-white/42">
+                  detected · {engineMode === "deepseek" ? "fast DeepSeek" : "local fallback"}
+                </div>
                 <p className="mt-2 text-sm leading-6 text-white/78">{report.detectedProduct}</p>
                 <p className="mt-4 text-xs leading-5 text-white/42">{report.transcriptSummary}</p>
               </div>
@@ -209,7 +344,9 @@ export function AdCortexApp() {
           </div>
         </section>
 
-        {report ? (
+        {loading ? (
+          <AnalysisProgress mode={mode} elapsedMs={elapsedMs} />
+        ) : report ? (
           <BrainAdStage report={report} />
         ) : (
           <section className="grid min-h-[520px] place-items-center rounded-[32px] border border-white/10 bg-black/62 shadow-[0_28px_120px_rgba(0,0,0,0.58)] backdrop-blur-2xl sm:min-h-[680px]">

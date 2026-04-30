@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { BrainSurface } from "@/components/BrainSurface";
+import { SwarmWorldPanel } from "@/components/SwarmWorldPanel";
 import type {
   Audience,
   Context,
@@ -190,7 +191,7 @@ export function IdeaValidator() {
               TRIBE reference maps
             </span>
             <span className="border border-[var(--hairline)] px-3 py-2">
-              Vercel MVP
+              MiroFish-style world
             </span>
           </div>
         </div>
@@ -366,6 +367,8 @@ export function IdeaValidator() {
                   </div>
                 </div>
               </section>
+
+              <SwarmWorldPanel report={report} />
 
               <BrainSurface
                 archetypeId={report.archetypeId}

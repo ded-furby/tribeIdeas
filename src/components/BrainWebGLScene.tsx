@@ -1,0 +1,345 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import type { MutableRefObject } from "react";
+import * as THREE from "three";
+import type { AdPredictionReport, BrainAdSignal } from "@/lib/ad-model";
+
+type OrbitState = {
+  rotateX: number;
+  rotateY: number;
+  panX: number;
+  panY: number;
+  zoom: number;
+};
+
+type Vec3 = {
+  x: number;
+  y: number;
+  z: number;
+};
+
+type PickTarget = {
+  id: string;
+  x: number;
+  y: number;
+  radius: number;
+};
+
+type BrainWebGLSceneProps = {
+  report: AdPredictionReport;
+  selectedId?: string;
+  meshMode: "Normal" | "Inflated";
+  skullMode: "Open" | "Close";
+  orbit: OrbitState;
+  pickTargetsRef: MutableRefObject<PickTarget[]>;
+};
+
+const activationCenters: Record<string, Vec3> = {
+  visual: { x: 1.18, y: -0.14, z: 0.42 },
+  place: { x: 1.12, y: 0.34, z: 0.33 },
+  salience: { x: 0.42, y: -0.08, z: 0.58 },
+  valuation: { x: -0.22, y: 0.2, z: 0.55 },
+  language: { x: -0.86, y: -0.16, z: 0.4 },
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getActivationCenter(signal: BrainAdSignal) {
+  return (
+    activationCenters[signal.id] ?? {
+      x: (signal.x - 50) / 32,
+      y: (signal.y - 50) / 38,
+      z: 0.38,
+    }
+  );
+}
+
+function brainSpace(point: Vec3) {
+  return new THREE.Vector3(point.x * 0.68 + 0.3, point.y * 0.72 - 0.72, point.z * 0.74);
+}
+
+function cortexPoint(row: number, col: number, rows: number, cols: number, inflated: boolean): Vec3 {
+  const theta = -Math.PI * 0.88 + (col / (cols - 1)) * Math.PI * 1.76;
+  const phi = -Math.PI * 0.43 + (row / (rows - 1)) * Math.PI * 0.86;
+  const gyri =
+    Math.sin(theta * 8.5 + phi * 5.1) * 0.04 +
+    Math.sin(theta * 14.2 - phi * 3.4) * 0.032 +
+    Math.cos(theta * 4.3 + row * 0.4) * 0.024;
+  const frontal = Math.max(0, Math.cos(theta - 0.9)) * 0.18;
+  const posterior = Math.max(0, Math.cos(theta + 1.2)) * 0.12;
+  const inflate = inflated ? 1.1 : 1;
+  const radius = (1 + gyri + frontal + posterior) * inflate;
+
+  return {
+    x: Math.cos(phi) * Math.cos(theta) * 1.62 * radius,
+    y: Math.sin(phi) * 0.92 * radius + Math.sin(theta * 3.2) * 0.05,
+    z: Math.cos(phi) * Math.sin(theta) * 0.86 * radius,
+  };
+}
+
+function makeBrainGeometry(inflated: boolean) {
+  const rows = 54;
+  const cols = 96;
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const indices: number[] = [];
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const point = cortexPoint(row, col, rows, cols, inflated);
+      const mapped = brainSpace(point);
+      positions.push(mapped.x, mapped.y, mapped.z);
+
+      const ridge =
+        0.68 +
+        Math.sin(row * 0.52 + col * 0.16) * 0.1 +
+        Math.cos(col * 0.31 - row * 0.18) * 0.08 +
+        point.z * 0.08;
+      const light = clamp(ridge, 0.42, 1);
+      colors.push(light, light, light);
+    }
+  }
+
+  for (let row = 0; row < rows - 1; row += 1) {
+    for (let col = 0; col < cols - 1; col += 1) {
+      const a = row * cols + col;
+      const b = a + 1;
+      const c = (row + 1) * cols + col + 1;
+      const d = (row + 1) * cols + col;
+      indices.push(a, b, d, b, c, d);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setIndex(indices);
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+function makeHeadShape() {
+  const shape = new THREE.Shape();
+  shape.moveTo(0.08, -1.78);
+  shape.bezierCurveTo(-0.48, -1.78, -0.94, -1.46, -1.06, -1.05);
+  shape.bezierCurveTo(-1.12, -0.84, -1.3, -0.72, -1.43, -0.58);
+  shape.bezierCurveTo(-1.52, -0.5, -1.3, -0.45, -1.12, -0.39);
+  shape.bezierCurveTo(-0.98, -0.33, -1.18, -0.25, -1.04, -0.16);
+  shape.bezierCurveTo(-0.9, -0.08, -0.88, 0.2, -0.68, 0.44);
+  shape.bezierCurveTo(-0.5, 0.64, -0.2, 0.68, -0.08, 1.04);
+  shape.bezierCurveTo(0.04, 1.45, 0.32, 1.86, 0.7, 1.86);
+  shape.bezierCurveTo(0.98, 1.55, 1.02, 0.9, 1.36, 0.34);
+  shape.bezierCurveTo(1.72, -0.28, 1.46, -1.18, 0.84, -1.58);
+  shape.bezierCurveTo(0.58, -1.72, 0.26, -1.82, 0.08, -1.78);
+  return shape;
+}
+
+function makeHeadShell() {
+  const group = new THREE.Group();
+  const shape = makeHeadShape();
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.11,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const edgeMaterial = new THREE.LineBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.26,
+    depthWrite: false,
+  });
+
+  [-0.58, -0.28, 0, 0.28, 0.58].forEach((z, index) => {
+    const scale = 1 - Math.abs(z) * 0.1;
+    const geometry = new THREE.ShapeGeometry(shape, 64);
+    geometry.scale(scale, 1 - Math.abs(z) * 0.02, 1);
+    geometry.translate(0, 0, z);
+    const mesh = new THREE.Mesh(geometry, material.clone());
+    mesh.material.opacity = index === 2 ? 0.13 : 0.055;
+    group.add(mesh);
+
+    const points = shape.getPoints(96).map((point) => new THREE.Vector3(point.x * scale, point.y, z));
+    const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points), edgeMaterial.clone());
+    line.material.opacity = index === 2 ? 0.32 : 0.12;
+    group.add(line);
+  });
+
+  group.position.set(0, 0, 0);
+  return group;
+}
+
+function makeActivationSprite(size: number, opacity: number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+    gradient.addColorStop(0, `rgba(255,255,255,${opacity})`);
+    gradient.addColorStop(0.16, `rgba(255,112,104,${opacity * 0.95})`);
+    gradient.addColorStop(0.5, `rgba(220,34,32,${opacity * 0.52})`);
+    gradient.addColorStop(1, "rgba(220,34,32,0)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 256, 256);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.setScalar(size);
+  return sprite;
+}
+
+export function BrainWebGLScene({
+  report,
+  selectedId,
+  meshMode,
+  skullMode,
+  orbit,
+  pickTargetsRef,
+}: BrainWebGLSceneProps) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+    camera.position.set(0, 0, 7.2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    host.appendChild(renderer.domElement);
+
+    const root = new THREE.Group();
+    scene.add(root);
+
+    const head = makeHeadShell();
+    root.add(head);
+
+    const brainMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      roughness: 0.56,
+      metalness: 0,
+      clearcoat: 0.32,
+      vertexColors: true,
+      side: THREE.DoubleSide,
+    });
+    const brainMesh = new THREE.Mesh(makeBrainGeometry(meshMode === "Inflated"), brainMaterial);
+    root.add(brainMesh);
+
+    const activations = new Map<string, THREE.Sprite>();
+    report.brainSignals.forEach((signal) => {
+      const center = brainSpace(getActivationCenter(signal));
+      const sprite = makeActivationSprite(0.82 + signal.value / 145, signal.id === selectedId ? 0.94 : 0.62);
+      sprite.position.copy(center);
+      activations.set(signal.id, sprite);
+      root.add(sprite);
+    });
+
+    scene.add(new THREE.AmbientLight(0xffffff, 1.35));
+    const key = new THREE.DirectionalLight(0xffffff, 2.8);
+    key.position.set(-2.4, 2.8, 4.2);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0xffffff, 1.5);
+    rim.position.set(3.6, -1.2, 2.4);
+    scene.add(rim);
+    const red = new THREE.PointLight(0xff4d45, 2.3, 5.4);
+    red.position.set(1.05, -0.82, 1.2);
+    root.add(red);
+
+    function resize() {
+      const rect = host.getBoundingClientRect();
+      const width = Math.max(1, rect.width);
+      const height = Math.max(1, rect.height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
+    }
+
+    function applyState() {
+      root.rotation.x = (orbit.rotateX * Math.PI) / 180;
+      root.rotation.y = (orbit.rotateY * Math.PI) / 180;
+      root.position.x = orbit.panX / 220;
+      root.position.y = -orbit.panY / 220;
+      root.scale.setScalar(orbit.zoom);
+      head.visible = skullMode !== "Close" || true;
+      head.traverse((child) => {
+        if ("material" in child) {
+          const material = child.material as THREE.Material & { opacity?: number };
+          if (typeof material.opacity === "number") {
+            material.opacity *= skullMode === "Close" ? 1.45 : 1;
+          }
+        }
+      });
+    }
+
+    function updatePickTargets() {
+      const rect = host.getBoundingClientRect();
+      const targets: PickTarget[] = [];
+      report.brainSignals.forEach((signal) => {
+        const sprite = activations.get(signal.id);
+        if (!sprite) return;
+        const projected = sprite.getWorldPosition(new THREE.Vector3()).project(camera);
+        targets.push({
+          id: signal.id,
+          x: ((projected.x + 1) / 2) * rect.width,
+          y: ((-projected.y + 1) / 2) * rect.height,
+          radius: 34,
+        });
+      });
+      pickTargetsRef.current = targets;
+    }
+
+    resize();
+    applyState();
+    renderer.render(scene, camera);
+    updatePickTargets();
+
+    const observer = new ResizeObserver(() => {
+      resize();
+      renderer.render(scene, camera);
+      updatePickTargets();
+    });
+    observer.observe(host);
+
+    return () => {
+      observer.disconnect();
+      pickTargetsRef.current = [];
+      host.removeChild(renderer.domElement);
+      brainMesh.geometry.dispose();
+      brainMaterial.dispose();
+      renderer.dispose();
+      activations.forEach((sprite) => {
+        sprite.material.map?.dispose();
+        sprite.material.dispose();
+      });
+      head.traverse((child) => {
+        if ("geometry" in child) {
+          (child.geometry as THREE.BufferGeometry).dispose();
+        }
+        if ("material" in child) {
+          const material = child.material;
+          if (Array.isArray(material)) material.forEach((item) => item.dispose());
+          else (material as THREE.Material).dispose();
+        }
+      });
+    };
+  }, [meshMode, orbit, pickTargetsRef, report.brainSignals, selectedId, skullMode]);
+
+  return <div ref={hostRef} className="h-full w-full" aria-label="Interactive TRIBE-style 3D brain" />;
+}

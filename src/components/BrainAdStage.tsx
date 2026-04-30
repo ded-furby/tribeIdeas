@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MutableRefObject, PointerEvent, WheelEvent } from "react";
+import { BrainWebGLScene } from "@/components/BrainWebGLScene";
 import type { AdPredictionReport, BrainAdSignal } from "@/lib/ad-model";
 
 type BrainAdStageProps = {
@@ -691,7 +692,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
           transition: isDragging ? "none" : "transform 260ms ease",
         }}
       >
-        <BrainVolumeCanvas
+        <BrainWebGLScene
           report={report}
           selectedId={activeSignal}
           meshMode={meshMode}

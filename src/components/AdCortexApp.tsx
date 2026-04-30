@@ -10,7 +10,7 @@ import {
   Play,
   Upload,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { BrainAdStage } from "@/components/BrainAdStage";
 import type { AdInputMode, AdPredictionReport } from "@/lib/ad-model";
@@ -207,6 +207,7 @@ export function AdCortexApp() {
   const [elapsedMs, setElapsedMs] = useState(0);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const brainStageRef = useRef<HTMLDivElement | null>(null);
 
   const canAnalyze = brief.trim().length > 4 && (mode === "upload" ? Boolean(fileName) : reelUrl.trim().length > 5);
   const activeSteps = useMemo(() => getAnalysisSteps(mode), [mode]);
@@ -226,6 +227,15 @@ export function AdCortexApp() {
 
     return () => window.clearInterval(interval);
   }, [loading]);
+
+  useEffect(() => {
+    if (!report) return;
+    const scroll = window.setTimeout(() => {
+      brainStageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+
+    return () => window.clearTimeout(scroll);
+  }, [report]);
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -428,21 +438,23 @@ export function AdCortexApp() {
           </div>
         </section>
 
-        {loading ? (
-          <AnalysisProgress mode={mode} elapsedMs={elapsedMs} />
-        ) : report ? (
-          <BrainAdStage report={report} />
-        ) : (
-          <section className="grid min-h-[520px] place-items-center rounded-[32px] border border-white/10 bg-black/62 shadow-[0_28px_120px_rgba(0,0,0,0.58)] backdrop-blur-2xl sm:min-h-[680px]">
-            <div className="px-6 text-center">
-              <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/12 bg-white/[0.06]">
-                <Brain size={25} className="text-white/78" />
+        <div ref={brainStageRef}>
+          {loading ? (
+            <AnalysisProgress mode={mode} elapsedMs={elapsedMs} />
+          ) : report ? (
+            <BrainAdStage report={report} />
+          ) : (
+            <section className="grid min-h-[520px] place-items-center rounded-[32px] border border-white/10 bg-black/62 shadow-[0_28px_120px_rgba(0,0,0,0.58)] backdrop-blur-2xl sm:min-h-[680px]">
+              <div className="px-6 text-center">
+                <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/12 bg-white/[0.06]">
+                  <Brain size={25} className="text-white/78" />
+                </div>
+                <h2 className="text-2xl font-semibold text-white">Brain response waits here.</h2>
+                <p className="mt-2 text-sm text-white/42">No predictions are shown until analysis runs.</p>
               </div>
-              <h2 className="text-2xl font-semibold text-white">Brain response waits here.</h2>
-              <p className="mt-2 text-sm text-white/42">No predictions are shown until analysis runs.</p>
-            </div>
-          </section>
-        )}
+            </section>
+          )}
+        </div>
 
         {report ? (
           <>

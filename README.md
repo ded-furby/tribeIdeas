@@ -26,14 +26,15 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-Without `DEEPSEEK_API_KEY`, the app uses the local ad predictor. With a key, `/api/analyze-ad` asks DeepSeek to sharpen the report while preserving the same schema.
+Without `DEEPSEEK_API_KEY`, the app uses the local ad predictor. With a key, `/api/analyze-ad` asks DeepSeek to sharpen the report while preserving the same schema. The default is the fast non-reasoning `deepseek-chat` model with a short timeout, then the app falls back to the local predictor instead of making the user wait.
 
 ## Environment
 
 ```env
 DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-v4-pro
+DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_TIMEOUT_MS=9000
 ```
 
 ## Verification

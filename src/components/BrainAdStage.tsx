@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import type { PointerEvent, WheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { MutableRefObject, PointerEvent, WheelEvent } from "react";
 import type { AdPredictionReport, BrainAdSignal } from "@/lib/ad-model";
 
 type BrainAdStageProps = {
@@ -12,24 +12,94 @@ const viewModes = ["True", "Compare", "Predicted"] as const;
 const meshModes = ["Normal", "Inflated"] as const;
 const skullModes = ["Open", "Close"] as const;
 
-const signalAnchors: Record<string, { x: number; y: number; rx: number; ry: number }> = {
-  visual: { x: 655, y: 252, rx: 54, ry: 34 },
-  place: { x: 635, y: 342, rx: 60, ry: 36 },
-  salience: { x: 555, y: 286, rx: 50, ry: 31 },
-  valuation: { x: 484, y: 320, rx: 54, ry: 31 },
-  language: { x: 405, y: 262, rx: 50, ry: 30 },
+type OrbitState = {
+  rotateX: number;
+  rotateY: number;
+  panX: number;
+  panY: number;
+  zoom: number;
+};
+
+type Vec3 = {
+  x: number;
+  y: number;
+  z: number;
+};
+
+type PickTarget = {
+  id: string;
+  x: number;
+  y: number;
+  radius: number;
+};
+
+const activationCenters: Record<string, Vec3> = {
+  visual: { x: 1.18, y: -0.14, z: 0.42 },
+  place: { x: 1.12, y: 0.34, z: 0.33 },
+  salience: { x: 0.42, y: -0.08, z: 0.58 },
+  valuation: { x: -0.22, y: 0.2, z: 0.55 },
+  language: { x: -0.86, y: -0.16, z: 0.4 },
 };
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-function getAnchor(signal: BrainAdSignal) {
-  return signalAnchors[signal.id] ?? {
-    x: 270 + signal.x * 4.8,
-    y: 155 + signal.y * 4.4,
-    rx: 54,
-    ry: 32,
+function getActivationCenter(signal: BrainAdSignal) {
+  return (
+    activationCenters[signal.id] ?? {
+      x: (signal.x - 50) / 32,
+      y: (signal.y - 50) / 38,
+      z: 0.38,
+    }
+  );
+}
+
+function rotatePoint(point: Vec3, orbit: OrbitState): Vec3 {
+  const rx = (orbit.rotateX * Math.PI) / 180;
+  const ry = (orbit.rotateY * Math.PI) / 180;
+  const cosX = Math.cos(rx);
+  const sinX = Math.sin(rx);
+  const cosY = Math.cos(ry);
+  const sinY = Math.sin(ry);
+  const y1 = point.y * cosX - point.z * sinX;
+  const z1 = point.y * sinX + point.z * cosX;
+  return {
+    x: point.x * cosY + z1 * sinY,
+    y: y1,
+    z: -point.x * sinY + z1 * cosY,
+  };
+}
+
+function projectPoint(point: Vec3, width: number, height: number, orbit: OrbitState) {
+  const rotated = rotatePoint(point, orbit);
+  const camera = 4.2;
+  const depth = camera - rotated.z;
+  const baseScale = Math.min(width, height) * 0.58 * orbit.zoom;
+  const scale = baseScale / depth;
+  return {
+    x: width * 0.58 + orbit.panX + rotated.x * scale,
+    y: height * 0.47 + orbit.panY + rotated.y * scale,
+    scale,
+    z: rotated.z,
+  };
+}
+
+function cortexPoint(row: number, col: number, rows: number, cols: number, inflated: boolean): Vec3 {
+  const theta = -Math.PI * 0.88 + (col / (cols - 1)) * Math.PI * 1.76;
+  const phi = -Math.PI * 0.43 + (row / (rows - 1)) * Math.PI * 0.86;
+  const gyri =
+    Math.sin(theta * 8.5 + phi * 5.1) * 0.035 +
+    Math.sin(theta * 14.2 - phi * 3.4) * 0.025 +
+    Math.cos(theta * 4.3 + row * 0.4) * 0.02;
+  const frontal = Math.max(0, Math.cos(theta - 0.9)) * 0.18;
+  const posterior = Math.max(0, Math.cos(theta + 1.2)) * 0.11;
+  const inflate = inflated ? 1.08 : 1;
+  const radius = (1 + gyri + frontal + posterior) * inflate;
+  return {
+    x: Math.cos(phi) * Math.cos(theta) * 1.62 * radius,
+    y: Math.sin(phi) * 0.92 * radius + Math.sin(theta * 3.2) * 0.04,
+    z: Math.cos(phi) * Math.sin(theta) * 0.86 * radius,
   };
 }
 
@@ -62,138 +132,201 @@ function SegmentedControl<T extends string>({
   );
 }
 
-function BrainHeadScene({
+function BrainVolumeCanvas({
   report,
-  selected,
+  selectedId,
   meshMode,
   skullMode,
-  activeSignal,
-  setActiveSignal,
+  orbit,
+  pickTargetsRef,
 }: {
   report: AdPredictionReport;
-  selected?: BrainAdSignal;
+  selectedId?: string;
   meshMode: (typeof meshModes)[number];
   skullMode: (typeof skullModes)[number];
-  activeSignal?: string;
-  setActiveSignal: (id: string) => void;
+  orbit: OrbitState;
+  pickTargetsRef: MutableRefObject<PickTarget[]>;
 }) {
-  const cortexDepth = meshMode === "Inflated" ? [-66, -44, -22, 0, 22, 44, 66] : [-48, -32, -16, 0, 16, 32, 48];
-  const selectedAnchor = selected ? getAnchor(selected) : null;
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  return (
-    <div
-      className="relative h-full w-full [transform-style:preserve-3d]"
-      role="img"
-      aria-label="Interactive predicted brain response"
-    >
-      <div
-        className="absolute left-[19%] top-[8%] h-[76%] w-[66%] rounded-[52%_48%_44%_50%] border border-white/14 bg-white/[0.055] shadow-[inset_0_0_80px_rgba(255,255,255,0.05)] backdrop-blur-sm"
-        style={{
-          opacity: skullMode === "Open" ? 0.42 : 0.72,
-          transform: "translateZ(-86px) rotateY(-8deg)",
-        }}
-      />
-      <div
-        className="absolute left-[24%] top-[22%] h-[46%] w-[52%] rounded-full border border-white/10 bg-white/[0.035]"
-        style={{ transform: "translateZ(92px) rotateY(8deg)" }}
-      />
-      <div
-        className="absolute left-[17%] top-[55%] h-[35%] w-[21%] rounded-[40%] border border-white/8 bg-white/[0.025]"
-        style={{ transform: "translateZ(-34px) rotateZ(-18deg)" }}
-      />
-      <div
-        className="absolute left-[20%] top-[62%] h-[30%] w-[16%] rounded-full border border-white/8 bg-white/[0.025]"
-        style={{ transform: "translateZ(38px) rotateZ(10deg)" }}
-      />
+  useEffect(() => {
+    const canvasEl = canvasRef.current;
+    if (!canvasEl) return;
 
-      {cortexDepth.map((z, index) => {
-        const distance = Math.abs(z);
-        const isCore = z === 0;
-        return (
-          <div
-            key={z}
-            className="absolute left-[9%] top-[2%] h-[82%] w-[86%] bg-contain bg-center bg-no-repeat drop-shadow-[0_28px_40px_rgba(0,0,0,0.42)]"
-            style={{
-              backgroundImage: "url('/brain-assets/ad-cortex-tribe-stage.png')",
-              opacity: isCore ? 1 : 0.18 + (cortexDepth.length - index) * 0.018,
-              filter: isCore ? "none" : `blur(${distance > 40 ? 1.4 : 0.7}px) grayscale(0.15)`,
-              transform: `translateZ(${z}px) scale(${1 + (z > 0 ? z * 0.0009 : 0)})`,
-            }}
-          />
-        );
-      })}
+    const ctx = canvasEl.getContext("2d");
+    if (!ctx) return;
 
-      {report.brainSignals.map((signal, index) => {
-        const anchor = getAnchor(signal);
-        const isActive = signal.id === activeSignal;
-        const left = `${(anchor.x / 900) * 100}%`;
-        const top = `${(anchor.y / 760) * 100}%`;
-        const z = -18 + index * 14;
-        return (
-          <div
-            key={signal.id}
-            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={{
-              left,
-              top,
-              width: `${anchor.rx + signal.value / 3}px`,
-              height: `${anchor.ry + signal.value / 5}px`,
-              background:
-                "radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,100,94,0.82) 18%, rgba(219,32,28,0.48) 52%, rgba(219,32,28,0) 76%)",
-              filter: "blur(8px)",
-              opacity: isActive ? 0.95 : 0.42 + signal.value / 190,
-              transform: `translate3d(-50%, -50%, ${z + 72}px)`,
-            }}
-          />
-        );
-      })}
+    let frame = 0;
 
-      {report.brainSignals.map((signal, index) => {
-        const anchor = getAnchor(signal);
-        const isActive = signal.id === activeSignal;
-        return (
-          <button
-            key={signal.id}
-            type="button"
-            aria-label={signal.label}
-            onPointerDown={(event) => event.stopPropagation()}
-            onMouseEnter={() => setActiveSignal(signal.id)}
-            onFocus={() => setActiveSignal(signal.id)}
-            onClick={() => setActiveSignal(signal.id)}
-            className={`absolute z-30 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full border transition ${
-              isActive
-                ? "border-white bg-white/28 shadow-[0_0_32px_rgba(255,255,255,0.32)]"
-                : "border-white/28 bg-white/10 hover:border-white"
-            }`}
-            style={{
-              left: `${(anchor.x / 900) * 100}%`,
-              top: `${(anchor.y / 760) * 100}%`,
-              transform: `translate3d(-50%, -50%, ${86 + index * 12}px)`,
-            }}
-          />
-        );
-      })}
+    function draw() {
+      if (!canvasEl || !ctx) return;
+      const rect = canvasEl.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.max(1, rect.width);
+      const height = Math.max(1, rect.height);
 
-      {selected && selectedAnchor ? (
-        <>
-          <div
-            className="absolute h-[3px] w-[210px] origin-left rounded-full bg-white/70"
-            style={{
-              left: `${(selectedAnchor.x / 900) * 100}%`,
-              top: `${((selectedAnchor.y + 34) / 760) * 100}%`,
-              transform: "translate3d(0, 0, 106px) rotate(128deg)",
-            }}
-          />
-          <div
-            className="absolute left-1/2 top-[80%] w-[min(74%,390px)] -translate-x-1/2 rounded-[20px] border border-white/22 bg-black/60 px-5 py-3 text-center text-lg font-semibold text-white shadow-2xl backdrop-blur-2xl"
-            style={{ transform: "translate3d(-50%, 0, 124px)" }}
-          >
-            {selected.label}
-          </div>
-        </>
-      ) : null}
-    </div>
-  );
+      if (canvasEl.width !== Math.round(width * dpr) || canvasEl.height !== Math.round(height * dpr)) {
+        canvasEl.width = Math.round(width * dpr);
+        canvasEl.height = Math.round(height * dpr);
+      }
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+
+      const centerX = width * 0.58 + orbit.panX;
+      const centerY = height * 0.5 + orbit.panY;
+      const skullAlpha = skullMode === "Open" ? 0.16 : 0.3;
+
+      ctx.save();
+      ctx.globalAlpha = skullAlpha;
+      ctx.fillStyle = "rgba(255,255,255,0.12)";
+      ctx.strokeStyle = "rgba(255,255,255,0.24)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.ellipse(centerX, centerY - height * 0.05, width * 0.25 * orbit.zoom, height * 0.37 * orbit.zoom, -0.18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(centerX - width * 0.12, centerY + height * 0.24);
+      ctx.bezierCurveTo(centerX - width * 0.16, centerY + height * 0.44, centerX + width * 0.06, centerY + height * 0.47, centerX + width * 0.13, centerY + height * 0.27);
+      ctx.lineTo(centerX + width * 0.08, centerY + height * 0.49);
+      ctx.lineTo(centerX - width * 0.2, centerY + height * 0.49);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      const rows = 28;
+      const cols = 54;
+      const inflated = meshMode === "Inflated";
+      const grid: Array<Array<ReturnType<typeof projectPoint> & Vec3>> = [];
+      const particles: Array<ReturnType<typeof projectPoint> & { shade: number }> = [];
+
+      for (let row = 0; row < rows; row += 1) {
+        const projectedRow: Array<ReturnType<typeof projectPoint> & Vec3> = [];
+        for (let col = 0; col < cols; col += 1) {
+          const point = cortexPoint(row, col, rows, cols, inflated);
+          const projected = projectPoint(point, width, height, orbit);
+          const shade = clamp(0.48 + projected.z * 0.18 + Math.sin(row * 0.7 + col * 0.25) * 0.08, 0.28, 0.94);
+          const stored = { ...projected, ...point, shade };
+          projectedRow.push(stored);
+          particles.push(stored);
+        }
+        grid.push(projectedRow);
+      }
+
+      ctx.save();
+      ctx.lineCap = "round";
+      for (let row = 2; row < rows - 2; row += 3) {
+        ctx.beginPath();
+        for (let col = 2; col < cols - 2; col += 1) {
+          const point = grid[row][col];
+          if (col === 2) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        }
+        ctx.strokeStyle = "rgba(95,95,95,0.46)";
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,0.34)";
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+
+      for (let col = 4; col < cols - 3; col += 6) {
+        ctx.beginPath();
+        for (let row = 2; row < rows - 2; row += 1) {
+          const point = grid[row][col];
+          if (row === 2) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        }
+        ctx.strokeStyle = "rgba(74,74,74,0.38)";
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      particles
+        .sort((a, b) => a.z - b.z)
+        .forEach((point) => {
+          const radius = clamp(point.scale * 0.018, 1.15, 2.9);
+          const light = Math.round(205 + point.shade * 50);
+          ctx.beginPath();
+          ctx.fillStyle = `rgba(${light},${light},${light},${0.5 + point.shade * 0.4})`;
+          ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+      const pickTargets: PickTarget[] = [];
+      report.brainSignals.forEach((signal) => {
+        const center = projectPoint(getActivationCenter(signal), width, height, orbit);
+        const isActive = signal.id === selectedId;
+        const radius = clamp((signal.value / 100) * Math.min(width, height) * 0.16 * orbit.zoom, 42, 110);
+        const glow = ctx.createRadialGradient(center.x, center.y, 2, center.x, center.y, radius);
+        glow.addColorStop(0, "rgba(255,255,255,0.88)");
+        glow.addColorStop(0.18, "rgba(255,104,96,0.82)");
+        glow.addColorStop(0.52, "rgba(222,37,34,0.5)");
+        glow.addColorStop(1, "rgba(222,37,34,0)");
+        ctx.globalCompositeOperation = "screen";
+        ctx.fillStyle = glow;
+        ctx.globalAlpha = isActive ? 0.96 : 0.5;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.strokeStyle = isActive ? "rgba(255,255,255,0.78)" : "rgba(255,255,255,0.28)";
+        ctx.lineWidth = isActive ? 1.7 : 1;
+        ctx.arc(center.x, center.y, 13, 0, Math.PI * 2);
+        ctx.stroke();
+        pickTargets.push({ id: signal.id, x: center.x, y: center.y, radius: 28 });
+      });
+      pickTargetsRef.current = pickTargets;
+
+      const selectedSignal = report.brainSignals.find((signal) => signal.id === selectedId);
+      if (selectedSignal) {
+        const center = projectPoint(getActivationCenter(selectedSignal), width, height, orbit);
+        const labelX = width * 0.63;
+        const labelY = height * 0.78;
+        ctx.beginPath();
+        ctx.strokeStyle = "rgba(255,255,255,0.66)";
+        ctx.lineWidth = 2.2;
+        ctx.moveTo(center.x + 12, center.y + 16);
+        ctx.lineTo(labelX, labelY - 20);
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(0,0,0,0.62)";
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.lineWidth = 1;
+        const boxWidth = Math.min(390, width * 0.46);
+        const boxHeight = 46;
+        const boxX = labelX - boxWidth / 2;
+        const boxY = labelY - boxHeight / 2;
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 22);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#fff";
+        ctx.font = "700 16px ui-sans-serif, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(selectedSignal.label, labelX, labelY);
+      }
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(draw);
+    });
+    resizeObserver.observe(canvasEl);
+    frame = requestAnimationFrame(draw);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+    };
+  }, [meshMode, orbit, pickTargetsRef, report.brainSignals, selectedId, skullMode]);
+
+  return <canvas ref={canvasRef} className="h-full w-full" aria-label="Interactive predicted brain response" />;
 }
 
 export function BrainAdStage({ report }: BrainAdStageProps) {
@@ -201,8 +334,9 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
   const [meshMode, setMeshMode] = useState<(typeof meshModes)[number]>("Normal");
   const [skullMode, setSkullMode] = useState<(typeof skullModes)[number]>("Open");
   const [activeSignal, setActiveSignal] = useState(report.brainSignals[1]?.id ?? report.brainSignals[0]?.id);
-  const [orbit, setOrbit] = useState({ rotateX: -4, rotateY: 0, panX: 0, panY: 0, zoom: 1 });
+  const [orbit, setOrbit] = useState<OrbitState>({ rotateX: -8, rotateY: -14, panX: 0, panY: 0, zoom: 1 });
   const [isDragging, setIsDragging] = useState(false);
+  const pickTargetsRef = useRef<PickTarget[]>([]);
   const dragStart = useRef<{
     pointerId: number;
     x: number;
@@ -212,6 +346,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
     panX: number;
     panY: number;
     panMode: boolean;
+    moved: boolean;
   } | null>(null);
 
   const selected = useMemo<BrainAdSignal | undefined>(
@@ -230,6 +365,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
       panX: orbit.panX,
       panY: orbit.panY,
       panMode: event.shiftKey,
+      moved: false,
     };
     setIsDragging(true);
   }
@@ -239,6 +375,9 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
     if (!drag || drag.pointerId !== event.pointerId) return;
     const dx = event.clientX - drag.x;
     const dy = event.clientY - drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 6) {
+      drag.moved = true;
+    }
     setOrbit((current) =>
       drag.panMode
         ? {
@@ -255,7 +394,22 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
   }
 
   function onPointerUp(event: PointerEvent<HTMLDivElement>) {
-    if (dragStart.current?.pointerId === event.pointerId) {
+    const drag = dragStart.current;
+    if (drag?.pointerId === event.pointerId) {
+      if (!drag.moved) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const picked = pickTargetsRef.current
+          .map((target) => ({
+            ...target,
+            distance: Math.hypot(target.x - x, target.y - y),
+          }))
+          .sort((a, b) => a.distance - b.distance)[0];
+        if (picked && picked.distance <= picked.radius) {
+          setActiveSignal(picked.id);
+        }
+      }
       dragStart.current = null;
       setIsDragging(false);
     }
@@ -270,7 +424,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
   }
 
   function resetOrbit() {
-    setOrbit({ rotateX: -4, rotateY: 0, panX: 0, panY: 0, zoom: 1 });
+    setOrbit({ rotateX: -8, rotateY: -14, panX: 0, panY: 0, zoom: 1 });
   }
 
   return (
@@ -296,29 +450,20 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
         onWheel={onWheel}
         onDoubleClick={resetOrbit}
         style={{
-          perspective: "1100px",
           transition: isDragging ? "none" : "transform 260ms ease",
         }}
       >
-        <div
-          className="absolute inset-0 transition-transform duration-300"
-          style={{
-            transform: `translate3d(${orbit.panX}px, ${orbit.panY}px, 0) rotateX(${orbit.rotateX}deg) rotateY(${orbit.rotateY}deg) scale(${orbit.zoom})`,
-            transformStyle: "preserve-3d",
-          }}
-        >
-          <BrainHeadScene
-            report={report}
-            selected={selected}
-            meshMode={meshMode}
-            skullMode={skullMode}
-            activeSignal={activeSignal}
-            setActiveSignal={setActiveSignal}
-          />
-        </div>
+        <BrainVolumeCanvas
+          report={report}
+          selectedId={activeSignal}
+          meshMode={meshMode}
+          skullMode={skullMode}
+          orbit={orbit}
+          pickTargetsRef={pickTargetsRef}
+        />
       </div>
 
-      <div className="absolute left-4 right-4 top-16 z-40 rounded-[22px] border border-white/12 bg-white/[0.07] p-4 text-white shadow-2xl backdrop-blur-2xl sm:left-5 sm:right-auto sm:max-w-[440px]">
+      <div className="absolute bottom-[92px] left-4 right-4 z-40 rounded-[22px] border border-white/12 bg-black/50 p-4 text-white shadow-2xl backdrop-blur-2xl sm:left-5 sm:right-auto sm:max-w-[380px] lg:bottom-[104px]">
         <div className="text-xs uppercase tracking-[0.18em] text-white/48">what is happening</div>
         <div className="mt-2 text-sm leading-5 text-white/82">{selected?.meaning ?? report.brainSummary}</div>
         <div className="mt-3 text-xs leading-5 text-white/52">
@@ -326,7 +471,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
         </div>
       </div>
 
-      <div className="absolute bottom-[148px] left-4 z-40 grid gap-2 sm:left-auto sm:right-5 lg:bottom-[96px]">
+      <div className="absolute bottom-[92px] right-4 z-40 grid gap-2 lg:bottom-[104px]">
         <button
           type="button"
           onClick={resetOrbit}

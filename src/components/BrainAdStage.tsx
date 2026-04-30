@@ -215,6 +215,38 @@ function BrainVolumeCanvas({
       }
 
       ctx.save();
+      ctx.shadowColor = "rgba(255,255,255,0.18)";
+      ctx.shadowBlur = 22;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      for (let row = 2; row < rows - 2; row += 2) {
+        ctx.beginPath();
+        for (let col = 2; col < cols - 2; col += 1) {
+          const point = grid[row][col];
+          if (col === 2) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        }
+        ctx.strokeStyle = "rgba(235,235,235,0.28)";
+        ctx.lineWidth = inflated ? 9 : 7;
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,0.26)";
+        ctx.lineWidth = inflated ? 4 : 3;
+        ctx.stroke();
+      }
+      for (let col = 5; col < cols - 4; col += 5) {
+        ctx.beginPath();
+        for (let row = 3; row < rows - 3; row += 1) {
+          const point = grid[row][col];
+          if (row === 3) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        }
+        ctx.strokeStyle = "rgba(130,130,130,0.2)";
+        ctx.lineWidth = inflated ? 7 : 5;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.save();
       ctx.lineCap = "round";
       for (let row = 2; row < rows - 2; row += 3) {
         ctx.beginPath();
@@ -428,7 +460,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
   }
 
   return (
-    <section className="relative min-h-[590px] overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-[0_28px_120px_rgba(0,0,0,0.58)] sm:min-h-[720px]">
+    <section className="relative min-h-[560px] overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-[0_28px_120px_rgba(0,0,0,0.58)] sm:min-h-[640px]">
       <div className="absolute left-5 top-5 z-40 flex items-center gap-3 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-xs text-white/72 shadow-2xl backdrop-blur-2xl">
         <span className="h-2 w-2 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,0.7)]" />
         Drag orbit · wheel zoom
@@ -463,15 +495,17 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
         />
       </div>
 
-      <div className="absolute bottom-[92px] left-4 right-4 z-40 rounded-[22px] border border-white/12 bg-black/50 p-4 text-white shadow-2xl backdrop-blur-2xl sm:left-5 sm:right-auto sm:max-w-[380px] lg:bottom-[104px]">
+      <div className="absolute left-4 right-4 top-16 z-40 rounded-[22px] border border-white/12 bg-black/50 p-3 text-white shadow-2xl backdrop-blur-2xl sm:left-5 sm:right-auto sm:max-w-[360px] sm:p-4">
         <div className="text-xs uppercase tracking-[0.18em] text-white/48">what is happening</div>
-        <div className="mt-2 text-sm leading-5 text-white/82">{selected?.meaning ?? report.brainSummary}</div>
-        <div className="mt-3 text-xs leading-5 text-white/52">
+        <div className="mt-2 max-h-[82px] overflow-hidden text-xs leading-5 text-white/82 sm:text-sm">
+          {selected?.meaning ?? report.brainSummary}
+        </div>
+        <div className="mt-2 truncate text-[11px] leading-5 text-white/52 sm:text-xs">
           Detected: <span className="text-white/78">{report.detectedProduct}</span>
         </div>
       </div>
 
-      <div className="absolute bottom-[92px] right-4 z-40 grid gap-2 lg:bottom-[104px]">
+      <div className="absolute bottom-[82px] right-4 z-40 grid gap-2 sm:bottom-[92px]">
         <button
           type="button"
           onClick={resetOrbit}

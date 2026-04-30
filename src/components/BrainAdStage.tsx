@@ -85,7 +85,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
   }
 
   return (
-    <section className="relative min-h-[720px] overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-[0_28px_120px_rgba(0,0,0,0.58)]">
+    <section className="relative min-h-[590px] overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-[0_28px_120px_rgba(0,0,0,0.58)] sm:min-h-[720px]">
       <div className="absolute left-5 top-5 z-40 flex items-center gap-3 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-xs text-white/72 shadow-2xl backdrop-blur-2xl">
         <span className="h-2 w-2 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,0.7)]" />
         Drag the brain
@@ -144,7 +144,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
         ))}
       </div>
 
-      <div className="absolute left-5 top-16 z-40 max-w-[min(84vw,390px)] rounded-[22px] border border-white/12 bg-white/[0.07] p-4 text-white shadow-2xl backdrop-blur-2xl">
+      <div className="absolute left-4 right-4 top-16 z-40 rounded-[22px] border border-white/12 bg-white/[0.07] p-4 text-white shadow-2xl backdrop-blur-2xl sm:left-5 sm:right-auto sm:max-w-[390px]">
         <div className="text-xs uppercase tracking-[0.18em] text-white/48">what is happening</div>
         <div className="mt-2 text-sm leading-5 text-white/82">{report.brainSummary}</div>
         <div className="mt-3 text-xs leading-5 text-white/52">
@@ -152,13 +152,13 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
         </div>
       </div>
 
-      <div className="absolute bottom-[96px] left-1/2 z-40 w-[min(84vw,380px)] -translate-x-1/2 rounded-[20px] border border-white/22 bg-white/[0.08] px-5 py-3 text-center shadow-2xl backdrop-blur-2xl">
+      <div className="absolute bottom-[148px] left-1/2 z-40 w-[min(84vw,380px)] -translate-x-1/2 rounded-[20px] border border-white/22 bg-white/[0.08] px-5 py-3 text-center shadow-2xl backdrop-blur-2xl lg:bottom-[96px]">
         <div className="text-lg font-semibold text-white underline decoration-white/30 underline-offset-4">
           {selected?.label ?? report.activationLabel}
         </div>
       </div>
 
-      <div className="absolute bottom-5 left-5 right-5 z-40 grid gap-3 lg:grid-cols-[1.2fr_0.84fr_0.84fr]">
+      <div className="absolute bottom-4 left-4 right-4 z-40 grid gap-2 sm:bottom-5 sm:left-5 sm:right-5 lg:grid-cols-[1.2fr_0.84fr_0.84fr]">
         <SegmentedControl options={viewModes} value={viewMode} onChange={setViewMode} />
         <div className="grid grid-cols-2 rounded-[22px] border border-white/12 bg-white/[0.055] p-1 shadow-2xl backdrop-blur-2xl">
           {meshModes.map((option) => (

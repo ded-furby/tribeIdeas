@@ -10,22 +10,10 @@ import {
   Play,
   Upload,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { ChangeEvent } from "react";
 import { BrainAdStage } from "@/components/BrainAdStage";
-import { createLocalAdPrediction } from "@/lib/ad-prediction";
 import type { AdInputMode, AdPredictionReport } from "@/lib/ad-model";
-
-const sampleRequest = {
-  title: "Ad creative",
-  mode: "link" as AdInputMode,
-  brief: "A launch analytics tool for founders who want to know which ad makes buyers trust them.",
-  reelUrl: "https://instagram.com/reel/example",
-  audience: "Founders",
-  goal: "Drive signups",
-  product: "launch analytics tool for founders",
-  promise: "find the ad that creates trust before spending money",
-};
 
 function MetricPill({ label, value }: { label: string; value: number }) {
   return (
@@ -37,15 +25,14 @@ function MetricPill({ label, value }: { label: string; value: number }) {
 }
 
 export function AdCortexApp() {
-  const initialReport = useMemo(() => createLocalAdPrediction(sampleRequest), []);
   const [mode, setMode] = useState<AdInputMode>("link");
-  const [reelUrl, setReelUrl] = useState(sampleRequest.reelUrl);
-  const [brief, setBrief] = useState(sampleRequest.brief);
+  const [reelUrl, setReelUrl] = useState("");
+  const [brief, setBrief] = useState("");
   const [fileName, setFileName] = useState("");
   const [fileSize, setFileSize] = useState<number | undefined>();
   const [duration, setDuration] = useState<number | undefined>();
   const [previewUrl, setPreviewUrl] = useState("");
-  const [report, setReport] = useState<AdPredictionReport>(initialReport);
+  const [report, setReport] = useState<AdPredictionReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -204,44 +191,69 @@ export function AdCortexApp() {
               </div>
             )}
 
-            <div className="rounded-[24px] border border-white/10 bg-black/34 p-4 backdrop-blur-2xl">
-              <div className="text-xs uppercase tracking-[0.16em] text-white/42">detected</div>
-              <p className="mt-2 text-sm leading-6 text-white/78">{report.detectedProduct}</p>
-              <p className="mt-4 text-xs leading-5 text-white/42">{report.transcriptSummary}</p>
-            </div>
+            {report ? (
+              <div className="rounded-[24px] border border-white/10 bg-black/34 p-4 backdrop-blur-2xl">
+                <div className="text-xs uppercase tracking-[0.16em] text-white/42">detected</div>
+                <p className="mt-2 text-sm leading-6 text-white/78">{report.detectedProduct}</p>
+                <p className="mt-4 text-xs leading-5 text-white/42">{report.transcriptSummary}</p>
+              </div>
+            ) : (
+              <div className="grid rounded-[24px] border border-white/10 bg-black/34 p-4 text-center backdrop-blur-2xl">
+                <div className="m-auto">
+                  <div className="text-sm font-medium text-white">No analysis yet</div>
+                  <div className="mt-1 text-xs text-white/38">Run once to reveal the brain response.</div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
-        <BrainAdStage report={report} />
-
-        <section className="grid gap-4 lg:grid-cols-[1fr_auto]">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <MetricPill label="attention" value={report.attentionScore} />
-            <MetricPill label="trust" value={report.trustScore} />
-            <MetricPill label="memory" value={report.recallScore} />
-            <MetricPill label="ease" value={100 - report.frictionScore} />
-          </div>
-
-          <button
-            type="button"
-            onClick={copyReport}
-            className="flex min-h-16 items-center justify-center gap-2 rounded-[24px] border border-white/10 bg-white/[0.06] px-5 text-sm font-semibold text-white shadow-2xl backdrop-blur-2xl transition hover:border-white/25"
-          >
-            {copied ? <Check size={16} /> : <Clipboard size={16} />}
-            {copied ? "Copied" : "Copy readout"}
-          </button>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-3">
-          {report.recommendations.slice(0, 3).map((item) => (
-            <div
-              key={item}
-              className="rounded-[24px] border border-white/10 bg-white/[0.055] p-4 text-sm leading-6 text-white/68 shadow-2xl backdrop-blur-2xl"
-            >
-              {item}
+        {report ? (
+          <BrainAdStage report={report} />
+        ) : (
+          <section className="grid min-h-[520px] place-items-center rounded-[32px] border border-white/10 bg-black/62 shadow-[0_28px_120px_rgba(0,0,0,0.58)] backdrop-blur-2xl sm:min-h-[680px]">
+            <div className="px-6 text-center">
+              <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/12 bg-white/[0.06]">
+                <Brain size={25} className="text-white/78" />
+              </div>
+              <h2 className="text-2xl font-semibold text-white">Brain response waits here.</h2>
+              <p className="mt-2 text-sm text-white/42">No predictions are shown until analysis runs.</p>
             </div>
-          ))}
-        </section>
+          </section>
+        )}
+
+        {report ? (
+          <>
+            <section className="grid gap-4 lg:grid-cols-[1fr_auto]">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <MetricPill label="attention" value={report.attentionScore} />
+                <MetricPill label="trust" value={report.trustScore} />
+                <MetricPill label="memory" value={report.recallScore} />
+                <MetricPill label="ease" value={100 - report.frictionScore} />
+              </div>
+
+              <button
+                type="button"
+                onClick={copyReport}
+                className="flex min-h-16 items-center justify-center gap-2 rounded-[24px] border border-white/10 bg-white/[0.06] px-5 text-sm font-semibold text-white shadow-2xl backdrop-blur-2xl transition hover:border-white/25"
+              >
+                {copied ? <Check size={16} /> : <Clipboard size={16} />}
+                {copied ? "Copied" : "Copy readout"}
+              </button>
+            </section>
+
+            <section className="grid gap-4 md:grid-cols-3">
+              {report.recommendations.slice(0, 3).map((item) => (
+                <div
+                  key={item}
+                  className="rounded-[24px] border border-white/10 bg-white/[0.055] p-4 text-sm leading-6 text-white/68 shadow-2xl backdrop-blur-2xl"
+                >
+                  {item}
+                </div>
+              ))}
+            </section>
+          </>
+        ) : null}
       </div>
     </main>
   );

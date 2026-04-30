@@ -2,17 +2,19 @@
 
 :root {
   color-scheme: dark;
-  --background: #080807;
-  --foreground: #f7f7f4;
-  --muted: #a09c92;
-  --muted-strong: #cfcdc4;
-  --hairline: #2a2924;
-  --hairline-strong: #3a3831;
-  --surface: #11110f;
-  --surface-soft: #171611;
-  --surface-raised: #1f1e19;
-  --primary: #f54e00;
-  --primary-active: #d04200;
+  --background: #030303;
+  --foreground: #f5f5f2;
+  --muted: #898989;
+  --muted-strong: #c8c8c8;
+  --hairline: #242424;
+  --hairline-strong: #3a3a3a;
+  --surface: #0b0b0b;
+  --surface-soft: #111111;
+  --surface-raised: #1b1b1b;
+  --panel: #090909;
+  --stage-border: #303030;
+  --primary: #f5f5f2;
+  --primary-active: #d7d7d2;
   --success: #1f8a65;
   --danger: #cf2d56;
   --thinking: #dfa88f;
@@ -43,7 +45,9 @@ html {
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.08), transparent 34rem),
+    var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
@@ -56,7 +60,7 @@ select {
 }
 
 ::selection {
-  background: rgba(245, 78, 0, 0.35);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 @keyframes brain-pulse {

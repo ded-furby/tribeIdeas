@@ -213,6 +213,13 @@ export function BrainWebGLScene({
   pickTargetsRef,
 }: BrainWebGLSceneProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const liveStateRef = useRef({ orbit, skullMode });
+  const renderSceneRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    liveStateRef.current = { orbit, skullMode };
+    renderSceneRef.current?.();
+  }, [orbit, skullMode]);
 
   useEffect(() => {
     const hostEl = hostRef.current;
@@ -275,11 +282,12 @@ export function BrainWebGLScene({
     }
 
     function applyState() {
-      root.rotation.x = (orbit.rotateX * Math.PI) / 180;
-      root.rotation.y = (orbit.rotateY * Math.PI) / 180;
-      root.position.x = orbit.panX / 220;
-      root.position.y = -orbit.panY / 220;
-      root.scale.setScalar(orbit.zoom);
+      const { orbit: liveOrbit, skullMode: liveSkullMode } = liveStateRef.current;
+      root.rotation.x = (liveOrbit.rotateX * Math.PI) / 180;
+      root.rotation.y = (liveOrbit.rotateY * Math.PI) / 180;
+      root.position.x = liveOrbit.panX / 220;
+      root.position.y = -liveOrbit.panY / 220;
+      root.scale.setScalar(liveOrbit.zoom);
       head.visible = true;
       head.traverse((child) => {
         if ("material" in child) {
@@ -287,7 +295,7 @@ export function BrainWebGLScene({
           if (typeof material.opacity === "number") {
             const baseOpacity =
               typeof material.userData.baseOpacity === "number" ? material.userData.baseOpacity : material.opacity;
-            material.opacity = baseOpacity * (skullMode === "Close" ? 1.45 : 1);
+            material.opacity = baseOpacity * (liveSkullMode === "Close" ? 1.45 : 1);
           }
         }
       });
@@ -310,15 +318,19 @@ export function BrainWebGLScene({
       pickTargetsRef.current = targets;
     }
 
+    function renderScene() {
+      applyState();
+      renderer.render(scene, camera);
+      updatePickTargets();
+    }
+
+    renderSceneRef.current = renderScene;
     resize();
-    applyState();
-    renderer.render(scene, camera);
-    updatePickTargets();
+    renderScene();
 
     const observer = new ResizeObserver(() => {
       resize();
-      renderer.render(scene, camera);
-      updatePickTargets();
+      renderScene();
     });
     observer.observe(canvasHost);
 
@@ -327,6 +339,9 @@ export function BrainWebGLScene({
       pickTargetsRef.current = [];
       if (renderer.domElement.parentNode === canvasHost) {
         canvasHost.removeChild(renderer.domElement);
+      }
+      if (renderSceneRef.current === renderScene) {
+        renderSceneRef.current = null;
       }
       brainMesh.geometry.dispose();
       brainMaterial.dispose();
@@ -346,7 +361,7 @@ export function BrainWebGLScene({
         }
       });
     };
-  }, [meshMode, orbit, pickTargetsRef, report.brainSignals, selectedId, skullMode]);
+  }, [meshMode, pickTargetsRef, report.brainSignals, selectedId]);
 
   return <div ref={hostRef} className="h-full w-full" aria-label="Interactive TRIBE-style 3D brain" />;
 }

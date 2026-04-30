@@ -23,7 +23,7 @@ function SegmentedControl<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="grid min-w-0 flex-1 grid-cols-3 rounded-[18px] border border-[var(--stage-border)] bg-black/70 p-1">
+    <div className="grid min-w-0 flex-1 grid-cols-3 rounded-[22px] border border-white/12 bg-white/[0.055] p-1 shadow-2xl backdrop-blur-2xl">
       {options.map((option) => (
         <button
           key={option}
@@ -31,8 +31,8 @@ function SegmentedControl<T extends string>({
           onClick={() => onChange(option)}
           className={`h-10 rounded-[13px] text-sm font-semibold transition ${
             option === value
-              ? "bg-[#2d2d2d] text-white"
-              : "text-[#a9a9a9] hover:bg-white/5 hover:text-white"
+              ? "bg-white/18 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16)]"
+              : "text-white/48 hover:bg-white/8 hover:text-white"
           }`}
         >
           {option}
@@ -155,28 +155,28 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
 
       <div className="absolute bottom-5 left-5 right-5 z-40 grid gap-3 lg:grid-cols-[1.2fr_0.84fr_0.84fr]">
         <SegmentedControl options={viewModes} value={viewMode} onChange={setViewMode} />
-        <div className="grid grid-cols-2 rounded-[18px] border border-[var(--stage-border)] bg-black/70 p-1">
+        <div className="grid grid-cols-2 rounded-[22px] border border-white/12 bg-white/[0.055] p-1 shadow-2xl backdrop-blur-2xl">
           {meshModes.map((option) => (
             <button
               key={option}
               type="button"
               onClick={() => setMeshMode(option)}
               className={`h-10 rounded-[13px] text-sm font-semibold transition ${
-                option === meshMode ? "bg-[#2d2d2d] text-white" : "text-[#a9a9a9] hover:bg-white/5 hover:text-white"
+                option === meshMode ? "bg-white/18 text-white" : "text-white/48 hover:bg-white/8 hover:text-white"
               }`}
             >
               {option}
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-2 rounded-[18px] border border-[var(--stage-border)] bg-black/70 p-1">
+        <div className="grid grid-cols-2 rounded-[22px] border border-white/12 bg-white/[0.055] p-1 shadow-2xl backdrop-blur-2xl">
           {skullModes.map((option) => (
             <button
               key={option}
               type="button"
               onClick={() => setSkullMode(option)}
               className={`h-10 rounded-[13px] text-sm font-semibold transition ${
-                option === skullMode ? "bg-[#2d2d2d] text-white" : "text-[#a9a9a9] hover:bg-white/5 hover:text-white"
+                option === skullMode ? "bg-white/18 text-white" : "text-white/48 hover:bg-white/8 hover:text-white"
               }`}
             >
               {option}

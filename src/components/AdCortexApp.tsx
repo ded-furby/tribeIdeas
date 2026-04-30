@@ -44,11 +44,83 @@ function wait(ms: number) {
   });
 }
 
+function getUrlPreview(url: string) {
+  try {
+    const parsed = new URL(url);
+    return {
+      host: parsed.hostname.replace(/^www\./, ""),
+      path: `${parsed.pathname}${parsed.search}`.replace(/\/$/, "") || "/",
+    };
+  } catch {
+    return null;
+  }
+}
+
 function MetricPill({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-[22px] border border-white/10 bg-white/[0.06] px-4 py-3 shadow-2xl backdrop-blur-2xl">
       <div className="text-[11px] uppercase tracking-[0.16em] text-white/42">{label}</div>
       <div className="mt-1 text-2xl font-semibold text-white">{value}</div>
+    </div>
+  );
+}
+
+function LinkPreviewCard({
+  url,
+  loading,
+  report,
+}: {
+  url: string;
+  loading: boolean;
+  report: AdPredictionReport | null;
+}) {
+  const preview = getUrlPreview(url);
+
+  if (!preview) {
+    return (
+      <div className="grid aspect-video place-items-center rounded-[24px] border border-white/10 bg-black/42 text-center">
+        <div>
+          <div className="text-sm font-medium text-white">Ready for creative</div>
+          <div className="mt-1 text-xs text-white/38">Paste a reel or video link.</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative aspect-video overflow-hidden rounded-[24px] border border-white/10 bg-black/62 p-4 shadow-2xl">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_32%_18%,rgba(255,255,255,0.16),transparent_18rem),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_42%)]" />
+      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
+      <div className="relative z-10 flex h-full flex-col justify-between">
+        <div className="flex items-center justify-between gap-3">
+          <div className="rounded-full border border-white/12 bg-white/[0.07] px-3 py-1 text-xs uppercase tracking-[0.14em] text-white/52">
+            {loading ? "reading link" : report ? "creative analysed" : "creative preview"}
+          </div>
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full border border-white/12 bg-white/[0.07] px-3 py-1 text-xs font-semibold text-white/70 transition hover:border-white/28 hover:text-white"
+          >
+            Open
+          </a>
+        </div>
+
+        <div>
+          <div className="mb-5 grid h-14 w-14 place-items-center rounded-2xl border border-white/12 bg-white text-black shadow-[0_18px_60px_rgba(255,255,255,0.12)]">
+            <LinkIcon size={22} />
+          </div>
+          <div className="text-lg font-semibold text-white">{preview.host}</div>
+          <div className="mt-1 max-w-full truncate font-mono text-xs text-white/42">{preview.path}</div>
+          <div className="mt-3 text-xs leading-5 text-white/48">
+            {report
+              ? `Detected as ${report.detectedProduct} for ${report.audience}.`
+              : loading
+                ? "Analysing public caption clues and matching them to the product line."
+                : "This link will be analysed with the one-line product and audience context."}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -317,6 +389,8 @@ export function AdCortexApp() {
                 className="aspect-video w-full rounded-[24px] border border-white/10 bg-black object-cover"
                 onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
               />
+            ) : mode === "link" ? (
+              <LinkPreviewCard url={reelUrl} loading={loading} report={report} />
             ) : (
               <div className="grid aspect-video place-items-center rounded-[24px] border border-white/10 bg-black/42 text-center">
                 <div>

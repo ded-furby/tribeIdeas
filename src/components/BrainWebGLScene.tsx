@@ -163,11 +163,13 @@ function makeHeadShell() {
     geometry.translate(0, 0, z);
     const mesh = new THREE.Mesh(geometry, material.clone());
     mesh.material.opacity = index === 2 ? 0.13 : 0.055;
+    mesh.material.userData.baseOpacity = mesh.material.opacity;
     group.add(mesh);
 
     const points = shape.getPoints(96).map((point) => new THREE.Vector3(point.x * scale, point.y, z));
     const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points), edgeMaterial.clone());
     line.material.opacity = index === 2 ? 0.32 : 0.12;
+    line.material.userData.baseOpacity = line.material.opacity;
     group.add(line);
   });
 
@@ -213,8 +215,9 @@ export function BrainWebGLScene({
   const hostRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
+    const hostEl = hostRef.current;
+    if (!hostEl) return;
+    const canvasHost: HTMLDivElement = hostEl;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
@@ -223,7 +226,7 @@ export function BrainWebGLScene({
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    host.appendChild(renderer.domElement);
+    canvasHost.appendChild(renderer.domElement);
 
     const root = new THREE.Group();
     scene.add(root);
@@ -263,7 +266,7 @@ export function BrainWebGLScene({
     root.add(red);
 
     function resize() {
-      const rect = host.getBoundingClientRect();
+      const rect = canvasHost.getBoundingClientRect();
       const width = Math.max(1, rect.width);
       const height = Math.max(1, rect.height);
       camera.aspect = width / height;
@@ -277,19 +280,21 @@ export function BrainWebGLScene({
       root.position.x = orbit.panX / 220;
       root.position.y = -orbit.panY / 220;
       root.scale.setScalar(orbit.zoom);
-      head.visible = skullMode !== "Close" || true;
+      head.visible = true;
       head.traverse((child) => {
         if ("material" in child) {
           const material = child.material as THREE.Material & { opacity?: number };
           if (typeof material.opacity === "number") {
-            material.opacity *= skullMode === "Close" ? 1.45 : 1;
+            const baseOpacity =
+              typeof material.userData.baseOpacity === "number" ? material.userData.baseOpacity : material.opacity;
+            material.opacity = baseOpacity * (skullMode === "Close" ? 1.45 : 1);
           }
         }
       });
     }
 
     function updatePickTargets() {
-      const rect = host.getBoundingClientRect();
+      const rect = canvasHost.getBoundingClientRect();
       const targets: PickTarget[] = [];
       report.brainSignals.forEach((signal) => {
         const sprite = activations.get(signal.id);
@@ -315,12 +320,14 @@ export function BrainWebGLScene({
       renderer.render(scene, camera);
       updatePickTargets();
     });
-    observer.observe(host);
+    observer.observe(canvasHost);
 
     return () => {
       observer.disconnect();
       pickTargetsRef.current = [];
-      host.removeChild(renderer.domElement);
+      if (renderer.domElement.parentNode === canvasHost) {
+        canvasHost.removeChild(renderer.domElement);
+      }
       brainMesh.geometry.dispose();
       brainMaterial.dispose();
       renderer.dispose();

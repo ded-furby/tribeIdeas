@@ -4,17 +4,17 @@ Predict how a reel, video ad, or campaign hook will feel to viewers before you p
 
 ## What It Does
 
-AdCortex takes a reel link or local video upload and produces:
+AdCortex takes a reel/video link or local video upload plus one line describing the product and audience. It produces:
 
 - a TRIBE-demo-style brain response view with white cortex, dark head silhouette, and red predicted activation
 - attention, trust, recall, friction, confidence, and projected lift
-- viewer clusters for buyers, skeptics, scrollers, and amplifiers
+- a compact detected-product summary from your one-line input and any public link context it can read
 - a MiroFish-inspired predictive simulation trace
 - specific ad edits and next A/B tests
 
-The MVP is intentionally Vercel-friendly. It does **not** run the full TRIBE v2 checkpoint in a serverless function. The brain panel uses a generated fsaverage cortical render plus lightweight predictive response signals that can later be replaced by a GPU inference worker.
+The MVP is intentionally Vercel-friendly. It does **not** run the full TRIBE v2 checkpoint in a serverless function. The brain panel uses a generated fsaverage cortical render plus lightweight predictive response signals that can later be replaced by a GPU inference worker. The brain stage is draggable; double-click it to reset the view.
 
-Uploads are previewed locally in the browser. The API receives only creative metadata and the typed strategy fields.
+Uploads are previewed locally in the browser. The API receives only creative metadata and the typed one-line context. For public links, the API makes a best-effort pass over title/meta/visible text and ignores it if blocked.
 
 ## Local Setup
 

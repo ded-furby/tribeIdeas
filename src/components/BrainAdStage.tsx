@@ -130,25 +130,14 @@ function BrainHeadScene({
         transform={`translate(8 0) scale(${meshMode === "Inflated" ? 1.05 : 1})`}
         style={{ transformOrigin: "500px 350px" }}
       >
-        <path
-          d="M263 306c-18-59 20-113 78-122 18-50 79-74 131-47 45-40 121-26 151 25 56-2 101 40 106 94 52 26 61 93 21 134 22 58-24 118-90 112-25 45-86 65-137 41-45 36-112 29-144-15-66 9-118-35-114-95-50-30-50-99-2-127Z"
-          fill="url(#brain-white)"
-          stroke="rgba(255,255,255,0.72)"
-          strokeWidth="3"
-        />
-        <path
-          d="M332 211c35 5 43 33 20 57m85-123c-15 45 23 57 63 50m86-28c-25 23-24 52 7 69m93 42c-52-3-79 22-78 72m85 70c-45-16-80-6-105 32m-67 77c-14-43-47-55-96-34m-100-20c46-33 37-75-10-96m-49-59c45 13 75-7 84-52m82 14c32 26 75 22 105-8m-139 99c53 5 87-16 101-63m-146 129c34-29 78-35 128-16"
-          fill="none"
-          stroke="rgba(58,58,58,0.32)"
-          strokeWidth="18"
-          strokeLinecap="round"
-        />
-        <path
-          d="M332 211c35 5 43 33 20 57m85-123c-15 45 23 57 63 50m86-28c-25 23-24 52 7 69m93 42c-52-3-79 22-78 72m85 70c-45-16-80-6-105 32m-67 77c-14-43-47-55-96-34m-100-20c46-33 37-75-10-96m-49-59c45 13 75-7 84-52m82 14c32 26 75 22 105-8m-139 99c53 5 87-16 101-63m-146 129c34-29 78-35 128-16"
-          fill="none"
-          stroke="rgba(255,255,255,0.72)"
-          strokeWidth="9"
-          strokeLinecap="round"
+        <image
+          href="/brain-assets/ad-cortex-tribe-stage.png"
+          x="58"
+          y="42"
+          width="790"
+          height="624"
+          preserveAspectRatio="xMidYMid meet"
+          opacity={skullMode === "Open" ? "0.98" : "0.78"}
         />
 
         {report.brainSignals.map((signal) => {

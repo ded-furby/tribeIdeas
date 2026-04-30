@@ -57,9 +57,9 @@ function getActivationCenter(signal: BrainAdSignal) {
 
 function brainSpace(point: Vec3): Vec3 {
   return {
-    x: point.x * 0.78 + 0.2,
-    y: point.y * 0.82 - 0.5,
-    z: point.z * 0.82,
+    x: point.x * 0.68 + 0.3,
+    y: point.y * 0.72 - 0.72,
+    z: point.z * 0.74,
   };
 }
 
@@ -116,19 +116,19 @@ const headProfile: Array<{ x: number; y: number }> = [
   { x: -0.52, y: -1.67 },
   { x: -0.92, y: -1.42 },
   { x: -1.12, y: -1.08 },
-  { x: -1.1, y: -0.82 },
-  { x: -1.42, y: -0.66 },
-  { x: -1.62, y: -0.5 },
-  { x: -1.28, y: -0.42 },
-  { x: -1.16, y: -0.28 },
-  { x: -1.34, y: -0.18 },
-  { x: -1.1, y: -0.06 },
-  { x: -1.0, y: 0.18 },
-  { x: -0.74, y: 0.48 },
-  { x: -0.34, y: 0.66 },
-  { x: -0.18, y: 1.08 },
-  { x: 0.04, y: 1.58 },
-  { x: 0.42, y: 1.86 },
+  { x: -1.04, y: -0.84 },
+  { x: -1.26, y: -0.68 },
+  { x: -1.42, y: -0.56 },
+  { x: -1.15, y: -0.46 },
+  { x: -1.02, y: -0.29 },
+  { x: -1.15, y: -0.2 },
+  { x: -0.98, y: -0.1 },
+  { x: -0.9, y: 0.16 },
+  { x: -0.66, y: 0.46 },
+  { x: -0.28, y: 0.62 },
+  { x: -0.1, y: 1.02 },
+  { x: 0.08, y: 1.56 },
+  { x: 0.44, y: 1.88 },
   { x: 0.92, y: 1.82 },
   { x: 1.1, y: 1.26 },
   { x: 1.26, y: 0.72 },
@@ -184,7 +184,7 @@ function drawHumanHeadShell(
   const shellAlpha = skullMode === "Open" ? 0.22 : 0.38;
   const edgeAlpha = skullMode === "Open" ? 0.2 : 0.32;
   const mainProfile = headProfile.map(({ x, y }) => ({ x, y, z: 0.04 }));
-  const slices = [-0.7, -0.42, -0.18, 0.08, 0.34, 0.62]
+  const slices = [-0.62, -0.32, 0, 0.32, 0.62]
     .map((z, index) => {
       const taper = 1 - Math.abs(z) * 0.16;
       const depthOffset = Math.abs(z) * 0.08;
@@ -212,13 +212,13 @@ function drawHumanHeadShell(
   ctx.stroke();
 
   slices.forEach((slice) => {
-    const isMiddle = slice.index === 2 || slice.index === 3;
+    const isMiddle = slice.index === 2;
     ctx.beginPath();
     projectedPath(ctx, slice.points, width, height, orbit);
     ctx.closePath();
-    ctx.fillStyle = `rgba(255,255,255,${isMiddle ? shellAlpha * 0.24 : shellAlpha * 0.12})`;
-    ctx.strokeStyle = `rgba(255,255,255,${edgeAlpha * (isMiddle ? 1 : 0.54)})`;
-    ctx.lineWidth = isMiddle ? 1.4 : 0.8;
+    ctx.fillStyle = `rgba(255,255,255,${isMiddle ? shellAlpha * 0.2 : shellAlpha * 0.06})`;
+    ctx.strokeStyle = `rgba(255,255,255,${edgeAlpha * (isMiddle ? 0.9 : 0.28)})`;
+    ctx.lineWidth = isMiddle ? 1.2 : 0.7;
     ctx.fill();
     ctx.stroke();
   });

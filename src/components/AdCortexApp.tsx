@@ -34,8 +34,14 @@ function getAnalysisSteps(mode: AdInputMode) {
 }
 
 function analysisStepIndex(elapsedMs: number, steps: string[]) {
-  const thresholds = [0, 1700, 3400, 5600, 7800];
+  const thresholds = [0, 900, 1900, 3400, 5200];
   return steps.reduce((active, _step, index) => (elapsedMs >= thresholds[index] ? index : active), 0);
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 }
 
 function MetricPill({ label, value }: { label: string; value: number }) {
@@ -165,6 +171,7 @@ export function AdCortexApp() {
     setError("");
     setCopied(false);
 
+    const startedAt = Date.now();
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 24_000);
 
@@ -185,6 +192,10 @@ export function AdCortexApp() {
       });
       const payload = await response.json();
       if (!payload.ok) throw new Error(payload.error ?? "Could not analyze ad");
+      const remainingProgressMs = 1250 - (Date.now() - startedAt);
+      if (remainingProgressMs > 0) {
+        await wait(remainingProgressMs);
+      }
       setReport(payload.report);
       setEngineMode(payload.mode === "deepseek" ? "deepseek" : "local");
     } catch (err) {

@@ -6,16 +6,17 @@ import type { AdPredictionReport } from "@/lib/ad-model";
 export const runtime = "nodejs";
 
 const adSchema = z.object({
-  title: z.string().min(2).max(140),
+  title: z.string().min(2).max(140).optional(),
   mode: z.enum(["upload", "link"]),
+  brief: z.string().min(4).max(700).optional(),
   reelUrl: z.string().max(600).optional(),
   uploadedFileName: z.string().max(240).optional(),
   uploadedFileSize: z.number().nonnegative().optional(),
   uploadedDuration: z.number().nonnegative().optional(),
-  audience: z.string().min(2).max(120),
-  goal: z.string().min(2).max(80),
-  product: z.string().min(2).max(180),
-  promise: z.string().min(6).max(900),
+  audience: z.string().min(2).max(120).optional(),
+  goal: z.string().min(2).max(80).optional(),
+  product: z.string().min(2).max(180).optional(),
+  promise: z.string().min(6).max(900).optional(),
   notes: z.string().max(1400).optional(),
 });
 
@@ -26,6 +27,69 @@ function extractJson(text: string) {
     .replace(/```$/i, "")
     .trim();
   return JSON.parse(cleaned);
+}
+
+function readMeta(html: string, name: string) {
+  const pattern = new RegExp(
+    `<meta[^>]+(?:property|name)=["']${name}["'][^>]+content=["']([^"']+)["'][^>]*>|<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${name}["'][^>]*>`,
+    "i",
+  );
+  const match = html.match(pattern);
+  return match?.[1] ?? match?.[2] ?? "";
+}
+
+function cleanHtmlText(html: string) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function getLinkContext(url?: string) {
+  if (!url || !/^https?:\/\//i.test(url)) return "";
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4200);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; AdCortex/1.0; +https://github.com/ded-furby/tribeIdeas)",
+      },
+    });
+    if (!response.ok) return "";
+    const html = (await response.text()).slice(0, 260_000);
+    const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "";
+    const meta = [
+      readMeta(html, "og:title"),
+      readMeta(html, "og:description"),
+      readMeta(html, "twitter:title"),
+      readMeta(html, "twitter:description"),
+      readMeta(html, "description"),
+    ].filter(Boolean);
+    const caption =
+      html.match(/"shortDescription":"([^"]+)"/)?.[1] ??
+      html.match(/"captionTracks":\[(.*?)\]/)?.[1] ??
+      "";
+    const visible = cleanHtmlText(html).slice(0, 900);
+    return [title, ...meta, caption, visible]
+      .join(" ")
+      .replace(/\\u0026/g, "&")
+      .replace(/\\"/g, '"')
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 1800);
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function enhanceWithDeepSeek(seed: AdPredictionReport) {
@@ -77,7 +141,23 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     const parsed = adSchema.parse(json);
-    const seed = createLocalAdPrediction(parsed);
+    const linkContext = parsed.mode === "link" ? await getLinkContext(parsed.reelUrl) : "";
+    const brief = parsed.brief?.trim() || parsed.product || parsed.promise || "ad creative for likely buyers";
+    const seed = createLocalAdPrediction({
+      title: parsed.title || parsed.uploadedFileName || "Ad creative",
+      mode: parsed.mode,
+      brief,
+      reelUrl: parsed.reelUrl,
+      uploadedFileName: parsed.uploadedFileName,
+      uploadedFileSize: parsed.uploadedFileSize,
+      uploadedDuration: parsed.uploadedDuration,
+      audience: parsed.audience || "Cold buyers",
+      goal: parsed.goal || "Stop scroll",
+      product: parsed.product || brief,
+      promise: parsed.promise || brief,
+      notes: parsed.notes,
+      linkContext,
+    });
 
     try {
       const enhanced = await enhanceWithDeepSeek(seed);

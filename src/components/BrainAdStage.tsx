@@ -174,6 +174,47 @@ function projectedPath(
   });
 }
 
+function traceHeadProfile(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  orbit: OrbitState,
+  z: number,
+  taper = 1,
+) {
+  const point = (x: number, y: number) =>
+    projectPoint(
+      {
+        x: x * taper + (x > 1 ? -(1 - taper) * 0.34 : 0),
+        y: y * (0.98 + taper * 0.02),
+        z,
+      },
+      width,
+      height,
+      orbit,
+    );
+  const move = point(0.08, -1.78);
+  ctx.moveTo(move.x, move.y);
+
+  [
+    [-0.48, -1.78, -0.94, -1.46, -1.06, -1.05],
+    [-1.12, -0.84, -1.3, -0.72, -1.43, -0.58],
+    [-1.52, -0.5, -1.3, -0.45, -1.12, -0.39],
+    [-0.98, -0.33, -1.18, -0.25, -1.04, -0.16],
+    [-0.9, -0.08, -0.88, 0.2, -0.68, 0.44],
+    [-0.5, 0.64, -0.2, 0.68, -0.08, 1.04],
+    [0.04, 1.45, 0.32, 1.86, 0.7, 1.86],
+    [0.98, 1.55, 1.02, 0.9, 1.36, 0.34],
+    [1.72, -0.28, 1.46, -1.18, 0.84, -1.58],
+    [0.58, -1.72, 0.26, -1.82, 0.08, -1.78],
+  ].forEach(([c1x, c1y, c2x, c2y, ex, ey]) => {
+    const c1 = point(c1x, c1y);
+    const c2 = point(c2x, c2y);
+    const end = point(ex, ey);
+    ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, end.x, end.y);
+  });
+}
+
 function drawHumanHeadShell(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -183,7 +224,6 @@ function drawHumanHeadShell(
 ) {
   const shellAlpha = skullMode === "Open" ? 0.22 : 0.38;
   const edgeAlpha = skullMode === "Open" ? 0.2 : 0.32;
-  const mainProfile = headProfile.map(({ x, y }) => ({ x, y, z: 0.04 }));
   const slices = [-0.62, -0.32, 0, 0.32, 0.62]
     .map((z, index) => {
       const taper = 1 - Math.abs(z) * 0.16;
@@ -201,7 +241,7 @@ function drawHumanHeadShell(
 
   ctx.save();
   ctx.beginPath();
-  projectedPath(ctx, mainProfile, width, height, orbit);
+  traceHeadProfile(ctx, width, height, orbit, 0.04);
   ctx.closePath();
   ctx.fillStyle = `rgba(255,255,255,${skullMode === "Open" ? 0.08 : 0.16})`;
   ctx.strokeStyle = `rgba(255,255,255,${skullMode === "Open" ? 0.22 : 0.36})`;
@@ -214,7 +254,7 @@ function drawHumanHeadShell(
   slices.forEach((slice) => {
     const isMiddle = slice.index === 2;
     ctx.beginPath();
-    projectedPath(ctx, slice.points, width, height, orbit);
+    traceHeadProfile(ctx, width, height, orbit, slice.points[0]?.z ?? 0, 1 - Math.abs(slice.points[0]?.z ?? 0) * 0.16);
     ctx.closePath();
     ctx.fillStyle = `rgba(255,255,255,${isMiddle ? shellAlpha * 0.2 : shellAlpha * 0.06})`;
     ctx.strokeStyle = `rgba(255,255,255,${edgeAlpha * (isMiddle ? 0.9 : 0.28)})`;

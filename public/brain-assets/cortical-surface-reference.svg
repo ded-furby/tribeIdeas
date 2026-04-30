@@ -1,0 +1,93 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="760" fill="#070706"/>
+  <g opacity="0.28">
+    <path d="M60 120H1140M60 200H1140M60 280H1140M60 360H1140M60 440H1140M60 520H1140M60 600H1140" stroke="#26251e" stroke-width="1"/>
+    <path d="M120 70V690M240 70V690M360 70V690M480 70V690M600 70V690M720 70V690M840 70V690M960 70V690M1080 70V690" stroke="#26251e" stroke-width="1"/>
+  </g>
+  <text x="70" y="88" fill="#f54e00" font-family="monospace" font-size="18" letter-spacing="3">TRIBE v2 fsaverage-style cortical reference</text>
+  <text x="70" y="116" fill="#807d72" font-family="monospace" font-size="13">reference asset for no-GPU MVP · replace with live worker output later</text>
+
+  <defs>
+    <radialGradient id="hotOrange" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff1c7"/>
+      <stop offset="18%" stop-color="#ffbf52"/>
+      <stop offset="48%" stop-color="#f54e00"/>
+      <stop offset="100%" stop-color="#f54e00" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="hotPink" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/>
+      <stop offset="22%" stop-color="#ff9eb7"/>
+      <stop offset="54%" stop-color="#cf2d56"/>
+      <stop offset="100%" stop-color="#cf2d56" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="coolBlue" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f3fbff"/>
+      <stop offset="25%" stop-color="#9fbbe0"/>
+      <stop offset="62%" stop-color="#4a6ea8"/>
+      <stop offset="100%" stop-color="#4a6ea8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="22" stdDeviation="26" flood-color="#000" flood-opacity="0.65"/>
+    </filter>
+    <linearGradient id="cortex" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#bbb7aa"/>
+      <stop offset="52%" stop-color="#837f72"/>
+      <stop offset="100%" stop-color="#4b493f"/>
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <path d="M162 380C162 235 264 139 424 132C499 129 556 154 600 208C644 154 701 129 776 132C936 139 1038 235 1038 380C1038 530 921 632 777 635C704 637 648 614 600 565C552 614 496 637 423 635C279 632 162 530 162 380Z" fill="url(#cortex)" stroke="#d7d3c8" stroke-width="2.2"/>
+    <path d="M600 209C577 278 575 339 597 392C620 447 619 504 600 565" stroke="#26251e" stroke-width="7" stroke-linecap="round" opacity="0.62"/>
+
+    <g stroke="#2d2b25" stroke-width="5" stroke-linecap="round" opacity="0.74">
+      <path d="M258 239C301 196 368 179 442 195"/>
+      <path d="M230 315C298 270 381 263 482 300"/>
+      <path d="M220 403C311 345 422 351 526 413"/>
+      <path d="M250 494C329 464 424 470 507 517"/>
+      <path d="M310 578C359 550 425 547 492 578"/>
+      <path d="M742 195C816 178 883 196 926 239"/>
+      <path d="M718 300C819 263 902 270 970 315"/>
+      <path d="M674 413C778 351 889 345 980 403"/>
+      <path d="M693 517C776 470 871 464 950 494"/>
+      <path d="M708 578C775 547 841 550 890 578"/>
+      <path d="M364 165C343 232 349 290 383 338"/>
+      <path d="M455 151C417 229 418 306 458 380"/>
+      <path d="M301 370C329 421 348 477 338 547"/>
+      <path d="M836 165C857 232 851 290 817 338"/>
+      <path d="M745 151C783 229 782 306 742 380"/>
+      <path d="M899 370C871 421 852 477 862 547"/>
+    </g>
+
+    <g stroke="#f1eee5" stroke-width="2.2" stroke-linecap="round" opacity="0.36">
+      <path d="M270 257C332 225 391 223 448 251"/>
+      <path d="M251 340C329 306 414 311 500 360"/>
+      <path d="M271 449C340 420 424 429 495 478"/>
+      <path d="M752 251C809 223 868 225 930 257"/>
+      <path d="M700 360C786 311 871 306 949 340"/>
+      <path d="M705 478C776 429 860 420 929 449"/>
+    </g>
+
+    <circle cx="421" cy="292" r="122" fill="url(#hotOrange)" filter="url(#blur)" opacity="0.95"/>
+    <circle cx="765" cy="318" r="112" fill="url(#coolBlue)" filter="url(#blur)" opacity="0.72"/>
+    <circle cx="618" cy="515" r="118" fill="url(#hotPink)" filter="url(#blur)" opacity="0.62"/>
+    <circle cx="421" cy="292" r="34" fill="#fff1c7" opacity="0.86"/>
+    <circle cx="765" cy="318" r="28" fill="#d8ecff" opacity="0.72"/>
+    <circle cx="618" cy="515" r="25" fill="#ffd0dc" opacity="0.7"/>
+  </g>
+
+  <g font-family="monospace" font-size="13">
+    <rect x="72" y="628" width="265" height="54" fill="#11110f" stroke="#3a3831"/>
+    <circle cx="98" cy="655" r="9" fill="#f54e00"/>
+    <text x="116" y="660" fill="#cfcdc4">language / hook salience</text>
+    <rect x="356" y="628" width="230" height="54" fill="#11110f" stroke="#3a3831"/>
+    <circle cx="382" cy="655" r="9" fill="#9fbbe0"/>
+    <text x="400" y="660" fill="#cfcdc4">technical parsing</text>
+    <rect x="604" y="628" width="250" height="54" fill="#11110f" stroke="#3a3831"/>
+    <circle cx="630" cy="655" r="9" fill="#cf2d56"/>
+    <text x="648" y="660" fill="#cfcdc4">cognitive load risk</text>
+  </g>
+</svg>

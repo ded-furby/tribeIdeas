@@ -362,7 +362,7 @@ export function BrainWebGLScene({
       const height = Math.max(1, rect.height);
       responsiveFrameRef.current =
         width < 520
-          ? { scale: 0.54, panX: -0.42, panY: 0.24 }
+          ? { scale: 0.38, panX: -0.95, panY: 0.52 }
           : width < 820
             ? { scale: 0.74, panX: -0.2, panY: 0.1 }
             : { scale: 1, panX: 0, panY: 0 };

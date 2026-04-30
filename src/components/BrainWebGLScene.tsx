@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import * as THREE from "three";
 import type { AdPredictionReport, BrainAdSignal } from "@/lib/ad-model";
@@ -215,6 +215,7 @@ export function BrainWebGLScene({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const liveStateRef = useRef({ orbit, skullMode });
   const renderSceneRef = useRef<(() => void) | null>(null);
+  const [webglError, setWebglError] = useState(false);
 
   useEffect(() => {
     liveStateRef.current = { orbit, skullMode };
@@ -230,7 +231,14 @@ export function BrainWebGLScene({
     const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
     camera.position.set(0, 0, 7.2);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      window.setTimeout(() => setWebglError(false), 0);
+    } catch {
+      window.setTimeout(() => setWebglError(true), 0);
+      return;
+    }
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     canvasHost.appendChild(renderer.domElement);
@@ -362,6 +370,18 @@ export function BrainWebGLScene({
       });
     };
   }, [meshMode, pickTargetsRef, report.brainSignals, selectedId]);
+
+  if (webglError) {
+    return (
+      <div
+        ref={hostRef}
+        className="flex h-full w-full items-center justify-center px-8 text-center text-sm text-white/58"
+        aria-label="Interactive TRIBE-style 3D brain"
+      >
+        Enable WebGL or hardware acceleration to view the interactive 3D brain.
+      </div>
+    );
+  }
 
   return <div ref={hostRef} className="h-full w-full" aria-label="Interactive TRIBE-style 3D brain" />;
 }

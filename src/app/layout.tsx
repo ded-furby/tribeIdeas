@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "tribeIdeas",
+  title: "AdCortex",
   description:
-    "Validate ideas with TRIBE-derived brain response references and live audience simulation.",
+    "Predict ad and reel response with a TRIBE-style brain map and swarm-inspired audience simulation.",
 };
 
 export default function RootLayout({

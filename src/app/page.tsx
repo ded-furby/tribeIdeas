@@ -1,6 +1,5 @@
-import { IdeaValidator } from "@/components/IdeaValidator";
+import { AdCortexApp } from "@/components/AdCortexApp";
 
 export default function Home() {
-  return <IdeaValidator />;
+  return <AdCortexApp />;
 }
-

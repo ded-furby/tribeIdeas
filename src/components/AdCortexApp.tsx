@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  BarChart3,
   Brain,
   Check,
   Clipboard,
@@ -9,60 +8,30 @@ import {
   Link as LinkIcon,
   Loader2,
   Play,
-  Sparkles,
   Upload,
-  Users,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { BrainAdStage } from "@/components/BrainAdStage";
 import { createLocalAdPrediction } from "@/lib/ad-prediction";
-import type { AdGoal, AdInputMode, AdPredictionReport, ViewerAudience } from "@/lib/ad-model";
-
-const audiences: ViewerAudience[] = [
-  "Cold buyers",
-  "Warm prospects",
-  "Founders",
-  "Gen Z scrollers",
-  "B2B operators",
-  "Creators",
-];
-
-const goals: AdGoal[] = [
-  "Stop scroll",
-  "Drive signups",
-  "Sell product",
-  "Increase trust",
-  "Get installs",
-];
+import type { AdInputMode, AdPredictionReport } from "@/lib/ad-model";
 
 const sampleRequest = {
-  title: "AI ad teardown reel",
+  title: "Ad creative",
   mode: "link" as AdInputMode,
+  brief: "A launch analytics tool for founders who want to know which ad makes buyers trust them.",
   reelUrl: "https://instagram.com/reel/example",
-  audience: "Cold buyers",
+  audience: "Founders",
   goal: "Drive signups",
-  product: "A launch analytics tool for founders",
-  promise:
-    "Paste a campaign and see which creative makes buyers trust the product before they click.",
-  notes:
-    "The opening shows the dashboard result first, then a founder reacting to the score.",
+  product: "launch analytics tool for founders",
+  promise: "find the ad that creates trust before spending money",
 };
 
-function scoreClass(value: number) {
-  if (value >= 74) return "text-white";
-  if (value >= 56) return "text-[#d8d8d8]";
-  return "text-[#9c9c9c]";
-}
-
-function Metric({ label, value }: { label: string; value: number }) {
+function MetricPill({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-[18px] border border-[var(--hairline)] bg-[var(--surface)] p-4">
-      <div className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">{label}</div>
-      <div className={`mt-3 text-4xl font-semibold ${scoreClass(value)}`}>{value}</div>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/8">
-        <div className="h-full rounded-full bg-white" style={{ width: `${value}%` }} />
-      </div>
+    <div className="rounded-[22px] border border-white/10 bg-white/[0.06] px-4 py-3 shadow-2xl backdrop-blur-2xl">
+      <div className="text-[11px] uppercase tracking-[0.16em] text-white/42">{label}</div>
+      <div className="mt-1 text-2xl font-semibold text-white">{value}</div>
     </div>
   );
 }
@@ -70,13 +39,8 @@ function Metric({ label, value }: { label: string; value: number }) {
 export function AdCortexApp() {
   const initialReport = useMemo(() => createLocalAdPrediction(sampleRequest), []);
   const [mode, setMode] = useState<AdInputMode>("link");
-  const [title, setTitle] = useState(sampleRequest.title);
   const [reelUrl, setReelUrl] = useState(sampleRequest.reelUrl);
-  const [audience, setAudience] = useState<ViewerAudience>("Cold buyers");
-  const [goal, setGoal] = useState<AdGoal>("Drive signups");
-  const [product, setProduct] = useState(sampleRequest.product);
-  const [promise, setPromise] = useState(sampleRequest.promise);
-  const [notes, setNotes] = useState(sampleRequest.notes);
+  const [brief, setBrief] = useState(sampleRequest.brief);
   const [fileName, setFileName] = useState("");
   const [fileSize, setFileSize] = useState<number | undefined>();
   const [duration, setDuration] = useState<number | undefined>();
@@ -86,11 +50,7 @@ export function AdCortexApp() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const canAnalyze =
-    title.trim().length > 1 &&
-    product.trim().length > 1 &&
-    promise.trim().length > 5 &&
-    (mode === "upload" ? Boolean(fileName) : reelUrl.trim().length > 5);
+  const canAnalyze = brief.trim().length > 4 && (mode === "upload" ? Boolean(fileName) : reelUrl.trim().length > 5);
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -100,7 +60,6 @@ export function AdCortexApp() {
     setFileName(file.name);
     setFileSize(file.size);
     setPreviewUrl(URL.createObjectURL(file));
-    if (title === sampleRequest.title) setTitle(file.name.replace(/\.[^.]+$/, ""));
   }
 
   async function analyzeAd() {
@@ -114,17 +73,13 @@ export function AdCortexApp() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title,
+          title: fileName || "Ad creative",
           mode,
+          brief,
           reelUrl,
           uploadedFileName: fileName,
           uploadedFileSize: fileSize,
           uploadedDuration: duration,
-          audience,
-          goal,
-          product,
-          promise,
-          notes,
         }),
       });
       const payload = await response.json();
@@ -139,328 +94,154 @@ export function AdCortexApp() {
 
   async function copyReport() {
     await navigator.clipboard.writeText(
-      `${report.outcome} · ${report.confidence}/100\n${report.headline}\nProjected lift: ${report.projectedLift}%\nDominant feeling: ${report.dominantFeeling}\n${report.recommendations.join("\n")}`,
+      `${report.outcome} · ${report.confidence}/100\n${report.brainSummary}\nDetected: ${report.detectedProduct}`,
     );
     setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    window.setTimeout(() => setCopied(false), 1500);
   }
 
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <header className="border-b border-[var(--hairline)] bg-black/80">
-        <div className="mx-auto flex max-w-[1540px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+    <main className="min-h-screen overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_-10%,rgba(255,255,255,0.16),transparent_32rem),radial-gradient(circle_at_85%_18%,rgba(255,255,255,0.08),transparent_24rem)]" />
+
+      <div className="relative mx-auto flex min-h-screen max-w-[1540px] flex-col gap-5 px-4 py-5 sm:px-6">
+        <header className="flex flex-col gap-4 rounded-[30px] border border-white/10 bg-white/[0.055] p-4 shadow-2xl backdrop-blur-2xl md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl border border-[var(--hairline-strong)] bg-white text-black">
-              <Brain size={21} />
+            <div className="grid h-11 w-11 place-items-center rounded-2xl border border-white/20 bg-white text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+              <Brain size={22} />
             </div>
             <div>
-              <div className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                AdCortex
-              </div>
-              <h1 className="text-xl font-semibold tracking-tight">
-                Predict how your ad feels before people scroll past it.
+              <div className="text-xs uppercase tracking-[0.18em] text-white/44">AdCortex</div>
+              <h1 className="text-xl font-semibold tracking-tight text-white">
+                Predict the feeling behind a reel.
               </h1>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs text-[var(--muted)]">
-            <span className="rounded-full border border-[var(--hairline)] px-3 py-2">
-              TRIBE-style brain map
-            </span>
-            <span className="rounded-full border border-[var(--hairline)] px-3 py-2">
-              MiroFish-like prediction
-            </span>
-            <span className="rounded-full border border-[var(--hairline)] px-3 py-2">
-              DeepSeek-ready
-            </span>
-          </div>
-        </div>
-      </header>
 
-      <div className="mx-auto grid max-w-[1540px] gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[430px_1fr]">
-        <section className="rounded-[24px] border border-[var(--hairline)] bg-[var(--panel)] p-4">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-            <Sparkles size={15} />
-            creative input
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {(["link", "upload"] as const).map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setMode(item)}
-                className={`flex h-11 items-center justify-center gap-2 rounded-[14px] border text-sm transition ${
-                  mode === item
-                    ? "border-white bg-white text-black"
-                    : "border-[var(--hairline)] bg-black text-[var(--muted-strong)] hover:border-white/50"
-                }`}
-              >
-                {item === "link" ? <LinkIcon size={15} /> : <Upload size={15} />}
-                {item === "link" ? "Reel link" : "Upload"}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-4 space-y-4">
-            {mode === "link" ? (
-              <label className="block">
-                <span className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-                  reel / ad URL
-                </span>
-                <input
-                  value={reelUrl}
-                  onChange={(event) => setReelUrl(event.target.value)}
-                  className="mt-2 h-12 w-full rounded-[14px] border border-[var(--hairline)] bg-black px-3 text-sm outline-none transition focus:border-white"
-                  placeholder="https://..."
-                />
-              </label>
-            ) : (
-              <label className="grid min-h-36 cursor-pointer place-items-center rounded-[18px] border border-dashed border-[var(--hairline-strong)] bg-black p-4 text-center transition hover:border-white/50">
-                <input type="file" accept="video/*" className="hidden" onChange={onFileChange} />
-                <FileVideo className="mb-3 text-white" />
-                <span className="text-sm font-medium">{fileName || "Drop a reel/ad video"}</span>
-                <span className="mt-1 text-xs text-[var(--muted)]">
-                  metadata stays local; only duration/name go to the predictor
-                </span>
-              </label>
-            )}
-
-            {previewUrl ? (
-              <video
-                src={previewUrl}
-                controls
-                className="aspect-video w-full rounded-[18px] border border-[var(--hairline)] bg-black object-cover"
-                onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
-              />
-            ) : null}
-
-            <label className="block">
-              <span className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">ad name</span>
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                className="mt-2 h-12 w-full rounded-[14px] border border-[var(--hairline)] bg-black px-3 text-sm outline-none transition focus:border-white"
-              />
-            </label>
-
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-                  audience
-                </span>
-                <select
-                  value={audience}
-                  onChange={(event) => setAudience(event.target.value as ViewerAudience)}
-                  className="mt-2 h-12 w-full rounded-[14px] border border-[var(--hairline)] bg-black px-3 text-sm outline-none transition focus:border-white"
+          <div className="grid gap-2 md:min-w-[620px] md:grid-cols-[1fr_auto]">
+            <div className="grid grid-cols-2 rounded-[18px] border border-white/10 bg-black/35 p-1 backdrop-blur-2xl">
+              {(["link", "upload"] as const).map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setMode(item)}
+                  className={`flex h-11 items-center justify-center gap-2 rounded-[14px] text-sm font-semibold transition ${
+                    mode === item ? "bg-white text-black" : "text-white/54 hover:bg-white/8 hover:text-white"
+                  }`}
                 >
-                  {audiences.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">goal</span>
-                <select
-                  value={goal}
-                  onChange={(event) => setGoal(event.target.value as AdGoal)}
-                  className="mt-2 h-12 w-full rounded-[14px] border border-[var(--hairline)] bg-black px-3 text-sm outline-none transition focus:border-white"
-                >
-                  {goals.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
-                </select>
-              </label>
+                  {item === "link" ? <LinkIcon size={15} /> : <Upload size={15} />}
+                  {item === "link" ? "Link" : "Video"}
+                </button>
+              ))}
             </div>
-
-            <label className="block">
-              <span className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">product</span>
-              <input
-                value={product}
-                onChange={(event) => setProduct(event.target.value)}
-                className="mt-2 h-12 w-full rounded-[14px] border border-[var(--hairline)] bg-black px-3 text-sm outline-none transition focus:border-white"
-              />
-            </label>
-
-            <label className="block">
-              <span className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-                promise / hook
-              </span>
-              <textarea
-                value={promise}
-                onChange={(event) => setPromise(event.target.value)}
-                rows={4}
-                className="mt-2 w-full resize-none rounded-[14px] border border-[var(--hairline)] bg-black px-3 py-3 text-sm leading-6 outline-none transition focus:border-white"
-              />
-            </label>
-
-            <label className="block">
-              <span className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-                scene notes
-              </span>
-              <textarea
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                rows={3}
-                className="mt-2 w-full resize-none rounded-[14px] border border-[var(--hairline)] bg-black px-3 py-3 text-sm leading-6 outline-none transition focus:border-white"
-              />
-            </label>
-
             <button
               type="button"
               onClick={analyzeAd}
               disabled={!canAnalyze || loading}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-[16px] bg-white text-sm font-semibold text-black transition hover:bg-[#dcdcdc] disabled:cursor-not-allowed disabled:bg-[#2a2a2a] disabled:text-[#777]"
+              className="flex h-[52px] items-center justify-center gap-2 rounded-[18px] bg-white px-5 text-sm font-semibold text-black shadow-[0_18px_50px_rgba(255,255,255,0.14)] transition hover:bg-[#e8e8e8] disabled:cursor-not-allowed disabled:bg-white/14 disabled:text-white/35"
             >
               {loading ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} />}
-              Predict viewer response
+              Analyze
             </button>
+          </div>
+        </header>
+
+        <section className="grid gap-4 rounded-[32px] border border-white/10 bg-white/[0.055] p-4 shadow-2xl backdrop-blur-2xl lg:grid-cols-[0.86fr_1.14fr]">
+          <div className="grid gap-3">
+            {mode === "link" ? (
+              <label className="block">
+                <span className="text-xs uppercase tracking-[0.16em] text-white/42">reel or video URL</span>
+                <input
+                  value={reelUrl}
+                  onChange={(event) => setReelUrl(event.target.value)}
+                  className="mt-2 h-14 w-full rounded-[20px] border border-white/10 bg-black/42 px-4 text-sm text-white outline-none transition placeholder:text-white/28 focus:border-white/34"
+                  placeholder="https://..."
+                />
+              </label>
+            ) : (
+              <label className="grid min-h-28 cursor-pointer place-items-center rounded-[24px] border border-dashed border-white/18 bg-black/38 p-4 text-center transition hover:border-white/38">
+                <input type="file" accept="video/*" className="hidden" onChange={onFileChange} />
+                <FileVideo className="mb-2 text-white" />
+                <span className="text-sm font-medium text-white">{fileName || "Drop any reel or video"}</span>
+                <span className="mt-1 text-xs text-white/38">preview stays in browser</span>
+              </label>
+            )}
+
+            <label className="block">
+              <span className="text-xs uppercase tracking-[0.16em] text-white/42">
+                product + audience in one line
+              </span>
+              <textarea
+                value={brief}
+                onChange={(event) => setBrief(event.target.value)}
+                rows={3}
+                className="mt-2 w-full resize-none rounded-[20px] border border-white/10 bg-black/42 px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-white/28 focus:border-white/34"
+                placeholder="Example: skincare serum for women who want glass skin before a party"
+              />
+            </label>
 
             {error ? (
-              <div className="rounded-[16px] border border-white/20 bg-white/5 p-3 text-sm text-[var(--muted-strong)]">
+              <div className="rounded-[18px] border border-white/16 bg-white/[0.07] p-3 text-sm text-white/70">
                 {error}
               </div>
             ) : null}
           </div>
+
+          <div className="grid gap-3 sm:grid-cols-[1fr_0.9fr]">
+            {previewUrl ? (
+              <video
+                src={previewUrl}
+                controls
+                className="aspect-video w-full rounded-[24px] border border-white/10 bg-black object-cover"
+                onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
+              />
+            ) : (
+              <div className="grid aspect-video place-items-center rounded-[24px] border border-white/10 bg-black/42 text-center">
+                <div>
+                  <div className="text-sm font-medium text-white">Ready for creative</div>
+                  <div className="mt-1 text-xs text-white/38">Paste a link or upload a video.</div>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-[24px] border border-white/10 bg-black/34 p-4 backdrop-blur-2xl">
+              <div className="text-xs uppercase tracking-[0.16em] text-white/42">detected</div>
+              <p className="mt-2 text-sm leading-6 text-white/78">{report.detectedProduct}</p>
+              <p className="mt-4 text-xs leading-5 text-white/42">{report.transcriptSummary}</p>
+            </div>
+          </div>
         </section>
 
-        <div className="space-y-5">
-          <BrainAdStage report={report} />
+        <BrainAdStage report={report} />
 
-          <section className="grid gap-4 lg:grid-cols-[1fr_360px]">
-            <div className="rounded-[24px] border border-[var(--hairline)] bg-[var(--panel)] p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-                    prediction
-                  </div>
-                  <h2 className="mt-2 text-3xl font-semibold tracking-tight">{report.outcome}</h2>
-                  <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--muted-strong)]">
-                    {report.headline}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={copyReport}
-                  className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-[14px] border border-[var(--hairline-strong)] px-4 text-sm text-white transition hover:border-white"
-                >
-                  {copied ? <Check size={16} /> : <Clipboard size={16} />}
-                  {copied ? "Copied" : "Copy"}
-                </button>
-              </div>
+        <section className="grid gap-4 lg:grid-cols-[1fr_auto]">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricPill label="attention" value={report.attentionScore} />
+            <MetricPill label="trust" value={report.trustScore} />
+            <MetricPill label="memory" value={report.recallScore} />
+            <MetricPill label="ease" value={100 - report.frictionScore} />
+          </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Metric label="attention" value={report.attentionScore} />
-                <Metric label="trust" value={report.trustScore} />
-                <Metric label="recall" value={report.recallScore} />
-                <Metric label="low friction" value={100 - report.frictionScore} />
-              </div>
-            </div>
+          <button
+            type="button"
+            onClick={copyReport}
+            className="flex min-h-16 items-center justify-center gap-2 rounded-[24px] border border-white/10 bg-white/[0.06] px-5 text-sm font-semibold text-white shadow-2xl backdrop-blur-2xl transition hover:border-white/25"
+          >
+            {copied ? <Check size={16} /> : <Clipboard size={16} />}
+            {copied ? "Copied" : "Copy readout"}
+          </button>
+        </section>
 
-            <div className="rounded-[24px] border border-[var(--hairline)] bg-[var(--panel)] p-5">
-              <div className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-                projected lift
-              </div>
-              <div className="mt-3 flex items-end gap-2">
-                <span className="text-5xl font-semibold">{report.projectedLift}</span>
-                <span className="pb-2 text-sm text-[var(--muted)]">%</span>
-              </div>
-              <p className="mt-4 text-sm leading-6 text-[var(--muted-strong)]">
-                Dominant viewer feeling: <span className="text-white">{report.dominantFeeling}</span>.
-                The strongest predicted activity is {report.activationLabel}.
-              </p>
+        <section className="grid gap-4 md:grid-cols-3">
+          {report.recommendations.slice(0, 3).map((item) => (
+            <div
+              key={item}
+              className="rounded-[24px] border border-white/10 bg-white/[0.055] p-4 text-sm leading-6 text-white/68 shadow-2xl backdrop-blur-2xl"
+            >
+              {item}
             </div>
-          </section>
-
-          <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-            <div className="rounded-[24px] border border-[var(--hairline)] bg-[var(--panel)] p-5">
-              <div className="mb-4 flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-                <Users size={15} />
-                viewer clusters
-              </div>
-              <div className="space-y-3">
-                {report.viewerSegments.map((segment) => (
-                  <div key={segment.label} className="rounded-[18px] border border-[var(--hairline)] bg-black p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="font-medium">{segment.label}</div>
-                        <p className="mt-1 text-xs leading-5 text-[var(--muted)]">{segment.feeling}</p>
-                      </div>
-                      <div className="text-right text-sm font-semibold">{segment.share}%</div>
-                    </div>
-                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/8">
-                      <div className="h-full rounded-full bg-white" style={{ width: `${segment.conversionIntent}%` }} />
-                    </div>
-                    <p className="mt-3 text-xs leading-5 text-[var(--muted-strong)]">{segment.risk}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-[var(--hairline)] bg-[var(--panel)] p-5">
-              <div className="mb-4 flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-                <BarChart3 size={15} />
-                predictive analysis
-              </div>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="space-y-3">
-                  {report.predictiveRounds.map((round, index) => (
-                    <div key={round.label} className="rounded-[18px] border border-[var(--hairline)] bg-black p-4">
-                      <div className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-                        0{index + 1} · {round.status}
-                      </div>
-                      <div className="mt-2 font-medium">{round.label}</div>
-                      <p className="mt-2 text-xs leading-5 text-[var(--muted-strong)]">{round.output}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="space-y-3">
-                  {report.timeline.map((moment) => (
-                    <div key={moment.time} className="rounded-[18px] border border-[var(--hairline)] bg-black p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="font-medium">{moment.event}</div>
-                        <div className="text-xs text-[var(--muted)]">{moment.time}</div>
-                      </div>
-                      <p className="mt-2 text-xs leading-5 text-[var(--muted-strong)]">{moment.response}</p>
-                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/8">
-                        <div className="h-full rounded-full bg-white" style={{ width: `${moment.score}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-[24px] border border-[var(--hairline)] bg-[var(--panel)] p-5">
-              <div className="mb-4 text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-                make the ad better
-              </div>
-              <div className="space-y-3">
-                {report.recommendations.map((item) => (
-                  <div key={item} className="rounded-[16px] border border-[var(--hairline)] bg-black p-4 text-sm leading-6 text-[var(--muted-strong)]">
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="rounded-[24px] border border-[var(--hairline)] bg-[var(--panel)] p-5">
-              <div className="mb-4 text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-                next tests
-              </div>
-              <div className="space-y-3">
-                {report.experiments.map((item) => (
-                  <div key={item} className="rounded-[16px] border border-[var(--hairline)] bg-black p-4 text-sm leading-6 text-[var(--muted-strong)]">
-                    {item}
-                  </div>
-                ))}
-              </div>
-              <p className="mt-4 border-t border-[var(--hairline)] pt-4 text-xs leading-5 text-[var(--muted)]">
-                {report.sourceNote}
-              </p>
-            </div>
-          </section>
-        </div>
+          ))}
+        </section>
       </div>
     </main>
   );

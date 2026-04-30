@@ -166,7 +166,7 @@ export function createLocalAdPrediction(request: AdPredictionRequest): AdPredict
   const recallScore = clamp(50 + desire * 4 + proof * 4 + Math.min(request.product.length, 50) / 3 + ((hash >> 7) % 8));
   const frictionScore = clamp(42 + risk * 10 + durationPenalty - proof * 5 - desire * 2 + ((hash >> 9) % 7));
   const confidence = clamp(attentionScore * 0.34 + trustScore * 0.28 + recallScore * 0.24 + (100 - frictionScore) * 0.14);
-  const projectedLift = clamp((attentionScore + trustScore + recallScore - frictionScore) / 4 - 2, -18, 38);
+  const projectedLift = clamp(((attentionScore + trustScore + recallScore) / 3 - frictionScore) * 0.55, -18, 38);
   const dominantFeeling = classifyFeeling(seedText, attentionScore);
   const brainSignals = buildBrainSignals(attentionScore, trustScore, recallScore, frictionScore);
   const activationLabel = [...brainSignals].sort((a, b) => b.value - a.value)[0]?.label ?? "Visual motion network";

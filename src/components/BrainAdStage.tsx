@@ -73,13 +73,13 @@ function rotatePoint(point: Vec3, orbit: OrbitState): Vec3 {
 
 function projectPoint(point: Vec3, width: number, height: number, orbit: OrbitState) {
   const rotated = rotatePoint(point, orbit);
-  const camera = 4.2;
+  const camera = 4.4;
   const depth = camera - rotated.z;
-  const baseScale = Math.min(width, height) * 0.58 * orbit.zoom;
+  const baseScale = Math.min(width, height) * 0.72 * orbit.zoom;
   const scale = baseScale / depth;
   return {
-    x: width * 0.58 + orbit.panX + rotated.x * scale,
-    y: height * 0.47 + orbit.panY + rotated.y * scale,
+    x: width * 0.6 + orbit.panX + rotated.x * scale,
+    y: height * 0.48 + orbit.panY + rotated.y * scale,
     scale,
     z: rotated.z,
   };
@@ -101,6 +101,119 @@ function cortexPoint(row: number, col: number, rows: number, cols: number, infla
     y: Math.sin(phi) * 0.92 * radius + Math.sin(theta * 3.2) * 0.04,
     z: Math.cos(phi) * Math.sin(theta) * 0.86 * radius,
   };
+}
+
+const headProfile: Array<{ x: number; y: number }> = [
+  { x: 0.1, y: -1.78 },
+  { x: -0.52, y: -1.67 },
+  { x: -0.92, y: -1.42 },
+  { x: -1.12, y: -1.08 },
+  { x: -1.1, y: -0.82 },
+  { x: -1.42, y: -0.66 },
+  { x: -1.62, y: -0.5 },
+  { x: -1.28, y: -0.42 },
+  { x: -1.16, y: -0.28 },
+  { x: -1.34, y: -0.18 },
+  { x: -1.1, y: -0.06 },
+  { x: -1.0, y: 0.18 },
+  { x: -0.74, y: 0.48 },
+  { x: -0.34, y: 0.66 },
+  { x: -0.18, y: 1.08 },
+  { x: 0.04, y: 1.58 },
+  { x: 0.42, y: 1.86 },
+  { x: 0.92, y: 1.82 },
+  { x: 1.1, y: 1.26 },
+  { x: 1.26, y: 0.72 },
+  { x: 1.58, y: 0.08 },
+  { x: 1.66, y: -0.64 },
+  { x: 1.36, y: -1.25 },
+  { x: 0.82, y: -1.64 },
+];
+
+const facialFeatureLines: Vec3[][] = [
+  [
+    { x: -1.05, y: -0.78, z: 0.52 },
+    { x: -1.24, y: -0.72, z: 0.56 },
+    { x: -1.38, y: -0.58, z: 0.54 },
+  ],
+  [
+    { x: -1.07, y: -0.28, z: 0.55 },
+    { x: -1.28, y: -0.2, z: 0.58 },
+    { x: -1.05, y: -0.13, z: 0.55 },
+  ],
+  [
+    { x: -0.72, y: -0.84, z: 0.56 },
+    { x: -0.52, y: -0.78, z: 0.58 },
+  ],
+  [
+    { x: -0.54, y: 0.42, z: 0.5 },
+    { x: -0.2, y: 0.7, z: 0.46 },
+    { x: 0.04, y: 1.18, z: 0.38 },
+  ],
+];
+
+function projectedPath(
+  ctx: CanvasRenderingContext2D,
+  points: Vec3[],
+  width: number,
+  height: number,
+  orbit: OrbitState,
+) {
+  points.forEach((point, index) => {
+    const projected = projectPoint(point, width, height, orbit);
+    if (index === 0) ctx.moveTo(projected.x, projected.y);
+    else ctx.lineTo(projected.x, projected.y);
+  });
+}
+
+function drawHumanHeadShell(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  orbit: OrbitState,
+  skullMode: (typeof skullModes)[number],
+) {
+  const shellAlpha = skullMode === "Open" ? 0.22 : 0.38;
+  const edgeAlpha = skullMode === "Open" ? 0.2 : 0.32;
+  const slices = [-0.7, -0.42, -0.18, 0.08, 0.34, 0.62]
+    .map((z, index) => {
+      const taper = 1 - Math.abs(z) * 0.16;
+      const depthOffset = Math.abs(z) * 0.08;
+      const points = headProfile.map(({ x, y }) => ({
+        x: x * taper + (x > 1 ? -depthOffset : 0),
+        y: y * (1 - Math.abs(z) * 0.035),
+        z,
+      }));
+      const averageZ =
+        points.reduce((sum, point) => sum + rotatePoint(point, orbit).z, 0) / Math.max(1, points.length);
+      return { index, averageZ, points };
+    })
+    .sort((a, b) => a.averageZ - b.averageZ);
+
+  ctx.save();
+  slices.forEach((slice) => {
+    const isMiddle = slice.index === 2 || slice.index === 3;
+    ctx.beginPath();
+    projectedPath(ctx, slice.points, width, height, orbit);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(255,255,255,${isMiddle ? shellAlpha * 0.24 : shellAlpha * 0.12})`;
+    ctx.strokeStyle = `rgba(255,255,255,${edgeAlpha * (isMiddle ? 1 : 0.54)})`;
+    ctx.lineWidth = isMiddle ? 1.4 : 0.8;
+    ctx.fill();
+    ctx.stroke();
+  });
+
+  ctx.globalCompositeOperation = "screen";
+  ctx.shadowColor = "rgba(255,255,255,0.18)";
+  ctx.shadowBlur = 16;
+  facialFeatureLines.forEach((line) => {
+    ctx.beginPath();
+    projectedPath(ctx, line, width, height, orbit);
+    ctx.strokeStyle = `rgba(255,255,255,${skullMode === "Open" ? 0.12 : 0.22})`;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  });
+  ctx.restore();
 }
 
 function SegmentedControl<T extends string>({
@@ -173,27 +286,7 @@ function BrainVolumeCanvas({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
 
-      const centerX = width * 0.58 + orbit.panX;
-      const centerY = height * 0.5 + orbit.panY;
-      const skullAlpha = skullMode === "Open" ? 0.16 : 0.3;
-
-      ctx.save();
-      ctx.globalAlpha = skullAlpha;
-      ctx.fillStyle = "rgba(255,255,255,0.12)";
-      ctx.strokeStyle = "rgba(255,255,255,0.24)";
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.ellipse(centerX, centerY - height * 0.05, width * 0.25 * orbit.zoom, height * 0.37 * orbit.zoom, -0.18, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(centerX - width * 0.12, centerY + height * 0.24);
-      ctx.bezierCurveTo(centerX - width * 0.16, centerY + height * 0.44, centerX + width * 0.06, centerY + height * 0.47, centerX + width * 0.13, centerY + height * 0.27);
-      ctx.lineTo(centerX + width * 0.08, centerY + height * 0.49);
-      ctx.lineTo(centerX - width * 0.2, centerY + height * 0.49);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
+      drawHumanHeadShell(ctx, width, height, orbit, skullMode);
 
       const rows = 28;
       const cols = 54;

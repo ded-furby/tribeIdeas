@@ -519,7 +519,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
   const [meshMode, setMeshMode] = useState<(typeof meshModes)[number]>("Normal");
   const [skullMode, setSkullMode] = useState<(typeof skullModes)[number]>("Open");
   const [activeSignal, setActiveSignal] = useState(report.brainSignals[1]?.id ?? report.brainSignals[0]?.id);
-  const [orbit, setOrbit] = useState<OrbitState>({ rotateX: -6, rotateY: 0, panX: 0, panY: 0, zoom: 1 });
+  const [orbit, setOrbit] = useState<OrbitState>({ rotateX: -6, rotateY: 0, panX: 0, panY: 0, zoom: 1.12 });
   const [isDragging, setIsDragging] = useState(false);
   const pickTargetsRef = useRef<PickTarget[]>([]);
   const dragStart = useRef<{
@@ -609,7 +609,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
   }
 
   function resetOrbit() {
-    setOrbit({ rotateX: -6, rotateY: 0, panX: 0, panY: 0, zoom: 1 });
+    setOrbit({ rotateX: -6, rotateY: 0, panX: 0, panY: 0, zoom: 1.12 });
   }
 
   return (

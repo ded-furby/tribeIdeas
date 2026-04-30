@@ -36,6 +36,23 @@ function wordHits(text: string, words: string[]) {
   return words.filter((word) => lower.includes(word)).length;
 }
 
+function stripMarkup(value: string) {
+  return value
+    .replace(/\\u003c/gi, "<")
+    .replace(/\\u003e/gi, ">")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/data:image\/[a-zA-Z+.-]+;base64,[^\s"'<]+/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\b(?:width|height|style|src|class|loading|alt)=["']?[^"'\s]+["']?/gi, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/\bInstagram\s+Instagram\b/gi, "Instagram")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function classifyFeeling(text: string, score: number) {
   const lower = text.toLowerCase();
   if (lower.includes("premium") || lower.includes("trust")) return "trust";
@@ -46,7 +63,7 @@ function classifyFeeling(text: string, score: number) {
 }
 
 function compactLine(value: string, fallback: string) {
-  return value
+  return stripMarkup(value)
     .replace(/\s+/g, " ")
     .trim()
     .split(/(?<=[.!?])\s+/)[0]
@@ -62,7 +79,7 @@ function titleCase(value: string) {
 }
 
 function cleanOfferText(value: string) {
-  return value
+  return stripMarkup(value)
     .replace(/\b(this is|we are selling|we sell|it's|it is|basically|product is)\b/gi, " ")
     .replace(/\s+/g, " ")
     .replace(/^[\s:,-]+|[\s:,-]+$/g, "")

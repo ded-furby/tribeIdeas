@@ -16,6 +16,7 @@ import {
 import { useMemo, useState } from "react";
 import { BrainSurface } from "@/components/BrainSurface";
 import { SwarmWorldPanel } from "@/components/SwarmWorldPanel";
+import { createLocalValidation } from "@/lib/local-validation";
 import type {
   Audience,
   Context,
@@ -42,6 +43,13 @@ const contexts: Context[] = [
 
 const sampleIdea =
   "A one-click idea validator that simulates how founders, builders, and investors react before you post. It combines audience simulation with TRIBE-derived brain response references so you can see which phrase creates clarity, confusion, or trust.";
+
+const sampleReport = createLocalValidation({
+  ideaTitle: "tribeIdeas",
+  ideaBody: sampleIdea,
+  audience: "Founders",
+  context: "LinkedIn post",
+});
 
 function confidenceLabel(value: number) {
   if (value >= 78) return "High";
@@ -109,10 +117,10 @@ export function IdeaValidator() {
   const [audience, setAudience] = useState<Audience>("Founders");
   const [context, setContext] = useState<Context>("LinkedIn post");
   const [customAudience, setCustomAudience] = useState("");
-  const [report, setReport] = useState<ValidationReport | null>(null);
+  const [report, setReport] = useState<ValidationReport | null>(sampleReport);
   const [activePhrase, setActivePhrase] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"local" | "deepseek" | null>(null);
+  const [mode, setMode] = useState<"local" | "deepseek" | null>("local");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 

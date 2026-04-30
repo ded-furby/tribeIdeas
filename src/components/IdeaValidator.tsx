@@ -301,29 +301,67 @@ export function IdeaValidator() {
 
         <section className="min-h-[720px]">
           {loading ? (
-            <div className="grid min-h-[720px] place-items-center border border-[var(--hairline)] bg-[var(--surface)] p-6">
-              <div className="w-full max-w-xl">
-                <div className="mb-6 flex items-center gap-3">
-                  <Loader2 className="animate-spin text-[var(--primary)]" />
-                  <div>
-                    <h2 className="text-2xl font-medium">The room is forming.</h2>
-                    <p className="text-sm text-[var(--muted)]">
-                      Live validation is running. Brain reference mapping happens after the audience pass.
-                    </p>
+            <div className="min-h-[720px] border border-[var(--hairline)] bg-[var(--surface)]">
+              <div className="grid min-h-[720px] gap-0 lg:grid-cols-[1.08fr_0.92fr]">
+                <div className="relative overflow-hidden border-b border-[var(--hairline)] bg-[#090908] p-5 lg:border-b-0 lg:border-r">
+                  <div className="absolute inset-0 opacity-[0.07] [background-image:radial-gradient(circle_at_1px_1px,#f7f7f4_1px,transparent_0)] [background-size:28px_28px]" />
+                  <div className="relative z-10 flex items-center gap-3">
+                    <Loader2 className="animate-spin text-[var(--primary)]" />
+                    <div>
+                      <h2 className="text-2xl font-medium">Building the parallel room.</h2>
+                      <p className="mt-1 text-sm text-[var(--muted)]">
+                        Agent clusters are forming, debating, and mapping the idea to a brain reference.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="relative mt-10 h-[430px]">
+                    {[
+                      ["Seed", "18%", "25%"],
+                      ["Validators", "72%", "22%"],
+                      ["Skeptics", "35%", "66%"],
+                      ["Amplifiers", "78%", "72%"],
+                      ["Brain map", "51%", "45%"],
+                    ].map(([label, left, top], index) => (
+                      <div
+                        key={label}
+                        className="absolute w-36 -translate-x-1/2 -translate-y-1/2 border border-[var(--hairline-strong)] bg-black/65 p-3 backdrop-blur"
+                        style={{ left, top }}
+                      >
+                        <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--primary)]">
+                          node 0{index + 1}
+                        </div>
+                        <div className="mt-2 text-sm">{label}</div>
+                      </div>
+                    ))}
+                    <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100">
+                      <path d="M18 25L72 22L51 45L35 66L78 72L51 45L18 25" stroke="#f54e00" strokeOpacity="0.32" strokeWidth="0.45" fill="none" strokeDasharray="1 2" />
+                    </svg>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  {progressCopy.map((item, index) => (
-                    <div
-                      key={item}
-                      className="flex items-center gap-3 border border-[var(--hairline)] bg-[#0b0b09] p-3"
-                    >
-                      <span className="font-mono text-xs text-[var(--primary)]">
-                        0{index + 1}
-                      </span>
-                      <span className="text-sm text-[var(--muted-strong)]">{item}</span>
-                    </div>
-                  ))}
+
+                <div className="p-5">
+                  <div className="mb-4 font-mono text-xs uppercase tracking-[0.14em] text-[var(--primary)]">
+                    real-time simulation phases
+                  </div>
+                  <div className="space-y-3">
+                    {progressCopy.map((item, index) => (
+                      <div
+                        key={item}
+                        className="flex items-center gap-3 border border-[var(--hairline)] bg-[#0b0b09] p-3"
+                      >
+                        <span className="font-mono text-xs text-[var(--primary)]">
+                          0{index + 1}
+                        </span>
+                        <span className="text-sm text-[var(--muted-strong)]">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 border border-[var(--hairline)] bg-[#0b0b09] p-4 font-mono text-xs leading-6 text-[var(--muted-strong)]">
+                    <div><span className="text-[var(--primary)]">t+04s</span> seed idea parsed</div>
+                    <div><span className="text-[var(--primary)]">t+11s</span> audience memory graph expanding</div>
+                    <div><span className="text-[var(--primary)]">t+19s</span> agent objections forming</div>
+                    <div><span className="text-[var(--primary)]">t+27s</span> cortical reference matching</div>
+                  </div>
                 </div>
               </div>
             </div>

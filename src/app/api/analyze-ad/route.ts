@@ -5,6 +5,9 @@ import type { AdPredictionReport } from "@/lib/ad-model";
 
 export const runtime = "nodejs";
 
+const LINK_CONTEXT_TIMEOUT_MS = 1800;
+const DEFAULT_DEEPSEEK_TIMEOUT_MS = 9000;
+
 const adSchema = z.object({
   title: z.string().min(2).max(140).optional(),
   mode: z.enum(["upload", "link"]),
@@ -53,7 +56,7 @@ function cleanHtmlText(html: string) {
 async function getLinkContext(url?: string) {
   if (!url || !/^https?:\/\//i.test(url)) return "";
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 4200);
+  const timeout = setTimeout(() => controller.abort(), LINK_CONTEXT_TIMEOUT_MS);
 
   try {
     const response = await fetch(url, {
@@ -64,7 +67,7 @@ async function getLinkContext(url?: string) {
       },
     });
     if (!response.ok) return "";
-    const html = (await response.text()).slice(0, 260_000);
+    const html = (await response.text()).slice(0, 140_000);
     const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "";
     const meta = [
       readMeta(html, "og:title"),
@@ -77,14 +80,14 @@ async function getLinkContext(url?: string) {
       html.match(/"shortDescription":"([^"]+)"/)?.[1] ??
       html.match(/"captionTracks":\[(.*?)\]/)?.[1] ??
       "";
-    const visible = cleanHtmlText(html).slice(0, 900);
+    const visible = cleanHtmlText(html).slice(0, 650);
     return [title, ...meta, caption, visible]
       .join(" ")
       .replace(/\\u0026/g, "&")
       .replace(/\\"/g, '"')
       .replace(/\s+/g, " ")
       .trim()
-      .slice(0, 1800);
+      .slice(0, 1250);
   } catch {
     return "";
   } finally {
@@ -97,44 +100,58 @@ async function enhanceWithDeepSeek(seed: AdPredictionReport) {
   if (!apiKey) return null;
 
   const baseUrl = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
-  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-v4-pro";
+  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
+  const timeoutMs = Number(process.env.DEEPSEEK_TIMEOUT_MS ?? DEFAULT_DEEPSEEK_TIMEOUT_MS);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.38,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "You refine ad prediction reports. Preserve the exact JSON shape and keys. Be sharp, concrete, and useful for improving ads. Do not claim real fMRI measurement, medical insight, or mind reading.",
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            task:
-              "Improve this TRIBE-style ad brain-response prediction using MiroFish-inspired persona simulation. Keep all arrays the same lengths and keep numeric fields between 0 and 100 unless projectedLift.",
-            report: seed,
-          }),
-        },
-      ],
-    }),
-  });
+  try {
+    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.28,
+        max_tokens: 900,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "Refine ad prediction JSON. Preserve exact keys and array lengths. Be concrete. Do not claim real fMRI, medical insight, or mind reading.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              task:
+                "Sharpen this TRIBE-style ad brain-response prediction using synthetic audience simulation. Keep numeric fields between 0 and 100 except projectedLift.",
+              report: seed,
+            }),
+          },
+        ],
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`DeepSeek request failed with ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`DeepSeek request failed with ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const content = payload?.choices?.[0]?.message?.content;
+    if (!content) return null;
+    return extractJson(content) as AdPredictionReport;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`DeepSeek timed out after ${Math.round(timeoutMs / 1000)}s`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  const payload = await response.json();
-  const content = payload?.choices?.[0]?.message?.content;
-  if (!content) return null;
-  return extractJson(content) as AdPredictionReport;
 }
 
 export async function POST(request: Request) {

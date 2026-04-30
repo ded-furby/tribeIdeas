@@ -310,7 +310,7 @@ export function BrainWebGLScene({
     const head = makeHeadShell();
     root.add(head);
 
-    const brainMaterial = new THREE.MeshPhysicalMaterial({
+    const proceduralBrainMaterial = new THREE.MeshPhysicalMaterial({
       color: 0xf2f2f2,
       roughness: 0.82,
       metalness: 0,
@@ -318,7 +318,16 @@ export function BrainWebGLScene({
       vertexColors: true,
       side: THREE.DoubleSide,
     });
-    const brainMesh = new THREE.Mesh(makeBrainGeometry(meshMode === "Inflated"), brainMaterial);
+    const modelBrainMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xf8f8f8,
+      roughness: 0.72,
+      metalness: 0,
+      clearcoat: 0.12,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.08,
+      side: THREE.DoubleSide,
+    });
+    const brainMesh = new THREE.Mesh(makeBrainGeometry(meshMode === "Inflated"), proceduralBrainMaterial);
     root.add(brainMesh);
 
     const brainModelRoot = new THREE.Group();
@@ -408,7 +417,7 @@ export function BrainWebGLScene({
       "/models/human-brain.glb",
       (gltf) => {
         if (disposed) return;
-        loadedBrainModel = fitBrainModel(gltf.scene, brainMaterial);
+        loadedBrainModel = fitBrainModel(gltf.scene, modelBrainMaterial);
         brainModelRoot.add(loadedBrainModel);
         brainModelRoot.visible = true;
         brainMesh.visible = false;
@@ -440,9 +449,10 @@ export function BrainWebGLScene({
       }
       brainMesh.geometry.dispose();
       if (loadedBrainModel) {
-        disposeObject(loadedBrainModel, brainMaterial);
+        disposeObject(loadedBrainModel, modelBrainMaterial);
       }
-      brainMaterial.dispose();
+      proceduralBrainMaterial.dispose();
+      modelBrainMaterial.dispose();
       renderer.dispose();
       activations.forEach((sprite) => {
         sprite.material.map?.dispose();

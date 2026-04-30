@@ -13,11 +13,11 @@ const meshModes = ["Normal", "Inflated"] as const;
 const skullModes = ["Open", "Close"] as const;
 
 const signalAnchors: Record<string, { x: number; y: number; rx: number; ry: number }> = {
-  visual: { x: 660, y: 280, rx: 70, ry: 42 },
-  place: { x: 660, y: 418, rx: 76, ry: 46 },
-  salience: { x: 555, y: 310, rx: 62, ry: 36 },
-  valuation: { x: 470, y: 355, rx: 68, ry: 38 },
-  language: { x: 390, y: 285, rx: 62, ry: 34 },
+  visual: { x: 655, y: 252, rx: 54, ry: 34 },
+  place: { x: 635, y: 342, rx: 60, ry: 36 },
+  salience: { x: 555, y: 286, rx: 50, ry: 31 },
+  valuation: { x: 484, y: 320, rx: 54, ry: 31 },
+  language: { x: 405, y: 262, rx: 50, ry: 30 },
 };
 
 function clamp(value: number, min: number, max: number) {

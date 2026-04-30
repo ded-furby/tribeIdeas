@@ -48,7 +48,7 @@ function SegmentedControl<T extends string>({
           key={option}
           type="button"
           onClick={() => onChange(option)}
-          className={`h-10 rounded-[13px] text-sm font-semibold transition ${
+          className={`h-9 rounded-[13px] text-xs font-semibold transition sm:h-10 sm:text-sm ${
             option === value
               ? "bg-white/18 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16)]"
               : "text-white/48 hover:bg-white/8 hover:text-white"
@@ -161,7 +161,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
 
   return (
     <section className="relative min-h-[560px] overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-[0_28px_120px_rgba(0,0,0,0.58)] sm:min-h-[640px]">
-      <div className="absolute left-5 top-5 z-40 flex items-center gap-3 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-xs text-white/72 shadow-2xl backdrop-blur-2xl">
+      <div className="absolute left-5 top-5 z-40 hidden items-center gap-3 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-xs text-white/72 shadow-2xl backdrop-blur-2xl sm:flex">
         <span className="h-2 w-2 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,0.7)]" />
         Drag orbit · wheel zoom · double-click reset
       </div>
@@ -223,7 +223,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
               key={option}
               type="button"
               onClick={() => setMeshMode(option)}
-              className={`h-10 rounded-[13px] text-sm font-semibold transition ${
+              className={`h-9 rounded-[13px] text-xs font-semibold transition sm:h-10 sm:text-sm ${
                 option === meshMode ? "bg-white/18 text-white" : "text-white/48 hover:bg-white/8 hover:text-white"
               }`}
             >
@@ -237,7 +237,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
               key={option}
               type="button"
               onClick={() => setSkullMode(option)}
-              className={`h-10 rounded-[13px] text-sm font-semibold transition ${
+              className={`h-9 rounded-[13px] text-xs font-semibold transition sm:h-10 sm:text-sm ${
                 option === skullMode ? "bg-white/18 text-white" : "text-white/48 hover:bg-white/8 hover:text-white"
               }`}
             >

@@ -273,6 +273,7 @@ export function BrainWebGLScene({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const liveStateRef = useRef({ orbit, skullMode });
   const renderSceneRef = useRef<(() => void) | null>(null);
+  const responsiveFrameRef = useRef({ scale: 1, panX: 0, panY: 0 });
   const [webglError, setWebglError] = useState(false);
 
   useEffect(() => {
@@ -359,6 +360,13 @@ export function BrainWebGLScene({
       const rect = canvasHost.getBoundingClientRect();
       const width = Math.max(1, rect.width);
       const height = Math.max(1, rect.height);
+      responsiveFrameRef.current =
+        width < 520
+          ? { scale: 0.54, panX: -0.42, panY: 0.24 }
+          : width < 820
+            ? { scale: 0.74, panX: -0.2, panY: 0.1 }
+            : { scale: 1, panX: 0, panY: 0 };
+      camera.position.z = width < 520 ? 8.2 : width < 820 ? 7.7 : 7.2;
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
@@ -366,11 +374,12 @@ export function BrainWebGLScene({
 
     function applyState() {
       const { orbit: liveOrbit, skullMode: liveSkullMode } = liveStateRef.current;
+      const frame = responsiveFrameRef.current;
       root.rotation.x = (liveOrbit.rotateX * Math.PI) / 180;
       root.rotation.y = (liveOrbit.rotateY * Math.PI) / 180;
-      root.position.x = liveOrbit.panX / 220;
-      root.position.y = -liveOrbit.panY / 220;
-      root.scale.setScalar(liveOrbit.zoom);
+      root.position.x = liveOrbit.panX / 220 + frame.panX;
+      root.position.y = -liveOrbit.panY / 220 + frame.panY;
+      root.scale.setScalar(liveOrbit.zoom * frame.scale);
       head.visible = true;
       head.traverse((child) => {
         if ("material" in child) {

@@ -242,7 +242,7 @@ function fitBrainModel(model: THREE.Object3D, material: THREE.Material) {
   model.position.copy(center).multiplyScalar(-1);
   fitted.add(model);
   fitted.scale.setScalar(2.22 / maxAxis);
-  fitted.rotation.set(0.02, -Math.PI / 2, -0.02);
+  fitted.rotation.set(0.02, 0, -0.02);
   return fitted;
 }
 

@@ -238,9 +238,12 @@ function fitBrainModel(model: THREE.Object3D, material: THREE.Material) {
   const center = bounds.getCenter(new THREE.Vector3());
   const size = bounds.getSize(new THREE.Vector3());
   const maxAxis = Math.max(size.x, size.y, size.z, 0.001);
-  model.position.sub(center);
-  model.scale.setScalar(2.22 / maxAxis);
-  model.rotation.set(0.02, -Math.PI / 2, -0.02);
+  const fitted = new THREE.Group();
+  model.position.copy(center).multiplyScalar(-1);
+  fitted.add(model);
+  fitted.scale.setScalar(2.22 / maxAxis);
+  fitted.rotation.set(0.02, -Math.PI / 2, -0.02);
+  return fitted;
 }
 
 function disposeObject(object: THREE.Object3D, sharedMaterial: THREE.Material) {
@@ -405,8 +408,7 @@ export function BrainWebGLScene({
       "/models/human-brain.glb",
       (gltf) => {
         if (disposed) return;
-        loadedBrainModel = gltf.scene;
-        fitBrainModel(loadedBrainModel, brainMaterial);
+        loadedBrainModel = fitBrainModel(gltf.scene, brainMaterial);
         brainModelRoot.add(loadedBrainModel);
         brainModelRoot.visible = true;
         brainMesh.visible = false;

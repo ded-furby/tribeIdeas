@@ -207,7 +207,7 @@ function BrainVolumeCanvas({
           const point = cortexPoint(row, col, rows, cols, inflated);
           const projected = projectPoint(point, width, height, orbit);
           const shade = clamp(0.48 + projected.z * 0.18 + Math.sin(row * 0.7 + col * 0.25) * 0.08, 0.28, 0.94);
-          const stored = { ...projected, ...point, shade };
+          const stored = { ...point, ...projected, shade };
           projectedRow.push(stored);
           particles.push(stored);
         }

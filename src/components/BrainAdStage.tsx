@@ -48,6 +48,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
   const [skullMode, setSkullMode] = useState<(typeof skullModes)[number]>("Close");
   const [activeSignal, setActiveSignal] = useState(report.brainSignals[1]?.id ?? report.brainSignals[0]?.id);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef<{ pointerId: number; x: number; y: number; panX: number; panY: number } | null>(null);
 
   const selected = useMemo<BrainAdSignal | undefined>(
@@ -64,6 +65,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
       panX: pan.x,
       panY: pan.y,
     };
+    setIsDragging(true);
   }
 
   function onPointerMove(event: PointerEvent<HTMLDivElement>) {
@@ -76,7 +78,10 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
   }
 
   function onPointerUp(event: PointerEvent<HTMLDivElement>) {
-    if (dragStart.current?.pointerId === event.pointerId) dragStart.current = null;
+    if (dragStart.current?.pointerId === event.pointerId) {
+      dragStart.current = null;
+      setIsDragging(false);
+    }
   }
 
   return (
@@ -101,7 +106,7 @@ export function BrainAdStage({ report }: BrainAdStageProps) {
         onDoubleClick={() => setPan({ x: 0, y: 0 })}
         style={{
           transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${meshMode === "Inflated" ? 1.07 : 1})`,
-          transition: dragStart.current ? "none" : "transform 260ms ease",
+          transition: isDragging ? "none" : "transform 260ms ease",
         }}
       >
         <Image

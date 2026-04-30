@@ -58,24 +58,33 @@ function getActivationCenter(signal: BrainAdSignal) {
 }
 
 function brainSpace(point: Vec3) {
-  return new THREE.Vector3(point.x * 0.68 + 0.3, point.y * 0.72 - 0.72, point.z * 0.74);
+  return new THREE.Vector3(point.x * 0.68 + 0.3, point.y * 0.72 + 0.16, point.z * 0.74);
 }
 
 function cortexPoint(row: number, col: number, rows: number, cols: number, inflated: boolean): Vec3 {
   const theta = -Math.PI * 0.88 + (col / (cols - 1)) * Math.PI * 1.76;
   const phi = -Math.PI * 0.43 + (row / (rows - 1)) * Math.PI * 0.86;
+  const foldA = Math.sin(theta * 9.8 + phi * 10.5 + Math.sin(theta * 2.1));
+  const foldB = Math.cos(theta * 15.5 - phi * 7.2 + Math.cos(phi * 4.4));
+  const foldC = Math.sin(theta * 23.5 + phi * 3.4);
+  const sulci =
+    -Math.pow(Math.max(0, foldA), 3) * 0.095 -
+    Math.pow(Math.max(0, foldB), 3) * 0.068 -
+    Math.pow(Math.max(0, foldC), 4) * 0.035;
   const gyri =
-    Math.sin(theta * 8.5 + phi * 5.1) * 0.04 +
-    Math.sin(theta * 14.2 - phi * 3.4) * 0.032 +
-    Math.cos(theta * 4.3 + row * 0.4) * 0.024;
+    Math.pow(Math.max(0, -foldA), 1.7) * 0.055 +
+    Math.pow(Math.max(0, -foldB), 1.8) * 0.036 +
+    Math.sin(theta * 5.4 + phi * 8.6) * 0.018;
+  const centralSulcus =
+    -Math.exp(-Math.pow((theta + 0.04) / 0.17, 2)) * Math.exp(-Math.pow(phi / 0.54, 2)) * 0.08;
   const frontal = Math.max(0, Math.cos(theta - 0.9)) * 0.18;
   const posterior = Math.max(0, Math.cos(theta + 1.2)) * 0.12;
   const inflate = inflated ? 1.1 : 1;
-  const radius = (1 + gyri + frontal + posterior) * inflate;
+  const radius = (1 + gyri + sulci + centralSulcus + frontal + posterior) * inflate;
 
   return {
     x: Math.cos(phi) * Math.cos(theta) * 1.62 * radius,
-    y: Math.sin(phi) * 0.92 * radius + Math.sin(theta * 3.2) * 0.05,
+    y: Math.sin(phi) * 0.92 * radius + Math.sin(theta * 3.2 + phi * 4.2) * 0.045,
     z: Math.cos(phi) * Math.sin(theta) * 0.86 * radius,
   };
 }
@@ -94,11 +103,11 @@ function makeBrainGeometry(inflated: boolean) {
       positions.push(mapped.x, mapped.y, mapped.z);
 
       const ridge =
-        0.68 +
-        Math.sin(row * 0.52 + col * 0.16) * 0.1 +
-        Math.cos(col * 0.31 - row * 0.18) * 0.08 +
+        0.72 +
+        Math.sin(row * 0.58 + col * 0.2) * 0.12 +
+        Math.cos(col * 0.36 - row * 0.22) * 0.1 +
         point.z * 0.08;
-      const light = clamp(ridge, 0.42, 1);
+      const light = clamp(ridge, 0.38, 0.96);
       colors.push(light, light, light);
     }
   }
@@ -144,7 +153,7 @@ function makeHeadShell() {
   const material = new THREE.MeshBasicMaterial({
     color: 0xffffff,
     transparent: true,
-    opacity: 0.11,
+    opacity: 0.045,
     side: THREE.DoubleSide,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
@@ -162,13 +171,13 @@ function makeHeadShell() {
     geometry.scale(scale, 1 - Math.abs(z) * 0.02, 1);
     geometry.translate(0, 0, z);
     const mesh = new THREE.Mesh(geometry, material.clone());
-    mesh.material.opacity = index === 2 ? 0.13 : 0.055;
+    mesh.material.opacity = index === 2 ? 0.06 : 0.022;
     mesh.material.userData.baseOpacity = mesh.material.opacity;
     group.add(mesh);
 
     const points = shape.getPoints(96).map((point) => new THREE.Vector3(point.x * scale, point.y, z));
     const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points), edgeMaterial.clone());
-    line.material.opacity = index === 2 ? 0.32 : 0.12;
+    line.material.opacity = index === 2 ? 0.2 : 0.075;
     line.material.userData.baseOpacity = line.material.opacity;
     group.add(line);
   });
@@ -240,6 +249,9 @@ export function BrainWebGLScene({
       return;
     }
     renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.82;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     canvasHost.appendChild(renderer.domElement);
 
@@ -250,10 +262,10 @@ export function BrainWebGLScene({
     root.add(head);
 
     const brainMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xffffff,
-      roughness: 0.56,
+      color: 0xf2f2f2,
+      roughness: 0.82,
       metalness: 0,
-      clearcoat: 0.32,
+      clearcoat: 0.06,
       vertexColors: true,
       side: THREE.DoubleSide,
     });
@@ -269,14 +281,14 @@ export function BrainWebGLScene({
       root.add(sprite);
     });
 
-    scene.add(new THREE.AmbientLight(0xffffff, 1.35));
-    const key = new THREE.DirectionalLight(0xffffff, 2.8);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.82));
+    const key = new THREE.DirectionalLight(0xffffff, 1.7);
     key.position.set(-2.4, 2.8, 4.2);
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0xffffff, 1.5);
+    const rim = new THREE.DirectionalLight(0xffffff, 1.05);
     rim.position.set(3.6, -1.2, 2.4);
     scene.add(rim);
-    const red = new THREE.PointLight(0xff4d45, 2.3, 5.4);
+    const red = new THREE.PointLight(0xff4d45, 1.65, 5.4);
     red.position.set(1.05, -0.82, 1.2);
     root.add(red);
 

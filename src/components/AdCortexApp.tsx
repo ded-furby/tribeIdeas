@@ -140,6 +140,10 @@ export function AdCortexApp() {
   const canAnalyze = brief.trim().length > 4 && (mode === "upload" ? Boolean(fileName) : reelUrl.trim().length > 5);
   const activeSteps = useMemo(() => getAnalysisSteps(mode), [mode]);
   const activeProgressText = activeSteps[analysisStepIndex(elapsedMs, activeSteps)];
+  const topBrainSignals = useMemo(
+    () => (report ? [...report.brainSignals].sort((a, b) => b.value - a.value).slice(0, 3) : []),
+    [report],
+  );
 
   useEffect(() => {
     if (!loading) return;
@@ -389,6 +393,39 @@ export function AdCortexApp() {
                 {copied ? <Check size={16} /> : <Clipboard size={16} />}
                 {copied ? "Copied" : "Copy readout"}
               </button>
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-[0.82fr_1.18fr]">
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.055] p-4 shadow-2xl backdrop-blur-2xl">
+                <div className="text-xs uppercase tracking-[0.16em] text-white/42">primary response</div>
+                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white">{report.outcome}</h2>
+                <p className="mt-3 text-sm leading-6 text-white/64">{report.headline}</p>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="rounded-[18px] border border-white/10 bg-black/28 p-3">
+                    <div className="text-[11px] uppercase tracking-[0.14em] text-white/36">feeling</div>
+                    <div className="mt-1 text-sm font-semibold text-white">{report.dominantFeeling}</div>
+                  </div>
+                  <div className="rounded-[18px] border border-white/10 bg-black/28 p-3">
+                    <div className="text-[11px] uppercase tracking-[0.14em] text-white/36">lift</div>
+                    <div className="mt-1 text-sm font-semibold text-white">{report.projectedLift}%</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.055] p-4 shadow-2xl backdrop-blur-2xl">
+                <div className="text-xs uppercase tracking-[0.16em] text-white/42">brain systems carrying the ad</div>
+                <div className="mt-3 grid gap-2">
+                  {topBrainSignals.map((signal) => (
+                    <div key={signal.id} className="rounded-[18px] border border-white/10 bg-black/28 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-semibold text-white">{signal.label}</div>
+                        <div className="font-mono text-xs text-white/54">{signal.value}/100</div>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-white/50">{signal.meaning}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </section>
 
             <section className="grid gap-4 md:grid-cols-3">

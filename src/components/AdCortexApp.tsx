@@ -80,6 +80,7 @@ export function AdCortexApp() {
   }
 
   async function copyReport() {
+    if (!report) return;
     await navigator.clipboard.writeText(
       `${report.outcome} · ${report.confidence}/100\n${report.brainSummary}\nDetected: ${report.detectedProduct}`,
     );

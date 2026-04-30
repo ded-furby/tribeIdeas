@@ -362,10 +362,10 @@ export function BrainWebGLScene({
       const height = Math.max(1, rect.height);
       responsiveFrameRef.current =
         width < 520
-          ? { scale: 0.38, panX: -0.95, panY: 0.52 }
+          ? { scale: 0.32, panX: -0.94, panY: 1.18 }
           : width < 820
-            ? { scale: 0.74, panX: -0.2, panY: 0.1 }
-            : { scale: 1, panX: 0, panY: 0 };
+            ? { scale: 0.68, panX: -0.32, panY: 0.24 }
+            : { scale: 0.96, panX: -0.08, panY: 0.06 };
       camera.position.z = width < 520 ? 8.2 : width < 820 ? 7.7 : 7.2;
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
